@@ -1,0 +1,83 @@
+@page
+@model WebApplication1.Pages.Stock.MoveModel
+@{
+    ViewData["Title"] = "Mouvement de stock";
+}
+<div class="page-header">
+    <div>
+        <h1>Entrée / Sortie de stock</h1>
+        <p>L'opération sera enregistrée à votre nom (@Model.Access.User?.FullName)</p>
+    </div>
+    <a asp-page="Index" class="btn btn-light"><i class="bi bi-arrow-left"></i> Retour</a>
+</div>
+
+<div class="card-app" style="max-width:640px">
+    <form method="post">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+        <div class="mb-3">
+            <label class="form-label">Type d'opération</label>
+            <div class="d-flex gap-2">
+                @if (Model.Can(Permissions.StockIn))
+                {
+                    <input type="radio" class="btn-check" asp-for="Type" value="In" id="typeIn" />
+                    <label class="btn btn-outline-success flex-fill" for="typeIn"><i class="bi bi-box-arrow-in-down"></i> Entrée (ajouter)</label>
+                }
+                @if (Model.Can(Permissions.StockOut))
+                {
+                    <input type="radio" class="btn-check" asp-for="Type" value="Out" id="typeOut" />
+                    <label class="btn btn-outline-warning flex-fill" for="typeOut"><i class="bi bi-box-arrow-up"></i> Sortie (retirer)</label>
+                }
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="ProductId" class="form-label">Produit</label>
+            <select asp-for="ProductId" class="form-select">
+                <option value="0">— Choisir un produit —</option>
+                @foreach (var p in Model.Products)
+                {
+                    <option value="@p.Id" data-stock="@p.Quantity" data-unit="@p.Unit">@p.Name (stock : @p.Quantity @p.Unit)</option>
+                }
+            </select>
+            <span asp-validation-for="ProductId" class="text-danger small"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Quantity" class="form-label">Quantité</label>
+            <input asp-for="Quantity" type="number" min="1" class="form-control" />
+            <span asp-validation-for="Quantity" class="text-danger small"></span>
+            <div class="form-text" id="preview"></div>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Reason" class="form-label">Motif / référence</label>
+            <input asp-for="Reason" class="form-control" placeholder="Ex : Livraison fournisseur BL-2031, produits périmés…" />
+            <span asp-validation-for="Reason" class="text-danger small"></span>
+        </div>
+
+        <button class="btn btn-primary px-4"><i class="bi bi-check-lg"></i> Valider</button>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const sel = document.getElementById('ProductId');
+            const qty = document.getElementById('Quantity');
+            const prev = document.getElementById('preview');
+            function update() {
+                const opt = sel.selectedOptions[0];
+                const type = document.querySelector('input[name="Type"]:checked');
+                if (!opt || !opt.dataset.stock || !type) { prev.textContent = ''; return; }
+                const cur = +opt.dataset.stock, q = +qty.value || 0;
+                const after = type.value === 'In' ? cur + q : cur - q;
+                prev.textContent = `Stock : ${cur} → ${after} ${opt.dataset.unit}`;
+                prev.className = 'form-text ' + (after < 0 ? 'text-danger fw-semibold' : '');
+            }
+            [sel, qty].forEach(e => e.addEventListener('input', update));
+            document.querySelectorAll('input[name="Type"]').forEach(e => e.addEventListener('change', update));
+            update();
+        })();
+    </script>
+}

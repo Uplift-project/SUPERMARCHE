@@ -1,0 +1,268 @@
+@using Microsoft.AspNetCore.Antiforgery
+@inject CatalogService Catalog
+@inject ShopSession Shop
+@inject IAntiforgery Antiforgery
+@{
+    var tree = await Catalog.GetTreeAsync();
+    var customerName = await Shop.GetCustomerNameAsync();
+    var cartCount = Shop.Count;
+    var q = Context.Request.Query["q"].ToString();
+    var activeRoot = ViewData["ActiveRoot"] as int?;
+    var flash = TempData["shop_flash"] as string;
+    var flashKind = TempData["shop_flash_kind"] as string ?? "success";
+    var token = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@(ViewData["Title"] is string t ? t + " — " : "")SuperMarché · Vos courses livrées chez vous</title>
+    <meta name="description" content="@(ViewData["Description"] ?? "SuperMarché : alimentation, boissons, beauté, entretien et bébé. Livraison à domicile, paiement à la livraison.")" />
+    <meta name="theme-color" content="#14532d" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400..800&display=swap" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/shop.css" asp-append-version="true" />
+    <meta name="csrf" content="@token" />
+</head>
+<body class="shop">
+
+<!-- ===== Bandeau info ===== -->
+<div class="topstrip">
+    <div class="container-xl d-flex align-items-center gap-3">
+        <span class="d-none d-md-inline"><i class="bi bi-truck"></i> Livraison <strong>gratuite</strong> dès 300 DH</span>
+        <span class="d-none d-lg-inline"><i class="bi bi-clock"></i> Livré aujourd'hui si commandé avant 14h</span>
+        <span class="d-md-none"><i class="bi bi-truck"></i> Livraison gratuite dès 300 DH</span>
+        <div class="ms-auto d-none d-md-flex gap-3">
+            <a asp-page="/Shop/Delivery"><i class="bi bi-geo-alt"></i> Zones de livraison</a>
+            <a asp-page="/Shop/Account/Index"><i class="bi bi-box-seam"></i> Suivre ma commande</a>
+            <a href="tel:0522000000"><i class="bi bi-telephone"></i> 05 22 00 00 00</a>
+        </div>
+    </div>
+</div>
+
+<!-- ===== En-tête ===== -->
+<header class="shop-header">
+    <div class="container-xl header-row">
+        <button class="icon-btn d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#menuDrawer" aria-label="Menu">
+            <i class="bi bi-list"></i>
+        </button>
+
+        <a class="logo" asp-page="/Shop/Index">
+            <span class="logo-mark"><i class="bi bi-basket2-fill"></i></span>
+            <span class="logo-text">Super<b>Marché</b></span>
+        </a>
+
+        <form class="search" method="get" asp-page="/Shop/Search" role="search">
+            <i class="bi bi-search"></i>
+            <input name="q" value="@q" placeholder="Rechercher un produit, une marque, un rayon…" autocomplete="off" aria-label="Rechercher" />
+            <button type="submit">Rechercher</button>
+        </form>
+
+        <div class="header-actions">
+            @if (customerName != null)
+            {
+                <div class="dropdown">
+                    <a class="action" href="#" data-bs-toggle="dropdown">
+                        <span class="avatar-sm">@customerName[..1].ToUpper()</span>
+                        <span class="d-none d-xl-flex action-text"><small>Bonjour</small>@customerName.Split(' ')[0]</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" asp-page="/Shop/Account/Index"><i class="bi bi-person"></i> Mon compte</a></li>
+                        <li><a class="dropdown-item" asp-page="/Shop/Account/Index" asp-fragment="commandes"><i class="bi bi-bag-check"></i> Mes commandes</a></li>
+                        <li><hr class="dropdown-divider" /></li>
+                        <li>
+                            <form method="post" asp-page="/Shop/Account/Logout">
+                                <button class="dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> Se déconnecter</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            }
+            else
+            {
+                <a class="action" asp-page="/Shop/Account/Login">
+                    <i class="bi bi-person"></i>
+                    <span class="d-none d-xl-flex action-text"><small>Bienvenue</small>Se connecter</span>
+                </a>
+            }
+            <button class="action cart-btn" type="button" data-bs-toggle="offcanvas" data-bs-target="#cartDrawer" aria-label="Panier">
+                <i class="bi bi-bag"></i>
+                <span class="cart-badge @(cartCount == 0 ? "is-empty" : "")" data-cart-count>@cartCount</span>
+                <span class="d-none d-xl-flex action-text"><small>Mon</small>Panier</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ===== Rayons (méga-menu) ===== -->
+    <nav class="catnav d-none d-lg-block">
+        <div class="container-xl d-flex align-items-stretch">
+            @foreach (var root in tree)
+            {
+                <div class="catnav-item @(activeRoot == root.Id ? "active" : "")" style="--c:@root.Color">
+                    <a class="catnav-link" asp-page="/Shop/Category" asp-route-slug="@root.Slug">
+                        <i class="bi @root.Icon"></i> @root.Name
+                        @if (root.Children.Count > 0) { <i class="bi bi-chevron-down chev"></i> }
+                    </a>
+                    @if (root.Children.Count > 0)
+                    {
+                        <div class="mega">
+                            <div class="mega-inner">
+                                <div class="mega-links">
+                                    <div class="mega-title">@root.Name</div>
+                                    <div class="mega-grid">
+                                        @foreach (var sub in root.Children)
+                                        {
+                                            <a asp-page="/Shop/Category" asp-route-slug="@sub.Slug" class="mega-link">
+                                                <span class="mega-ico"><i class="bi @sub.Icon"></i></span>
+                                                <span>@sub.Name
+                                                    @if (sub.Children.Count > 0) { <small>@string.Join(" · ", sub.Children.Take(3).Select(c => c.Name))</small> }
+                                                </span>
+                                            </a>
+                                        }
+                                    </div>
+                                </div>
+                                <a class="mega-promo" asp-page="/Shop/Category" asp-route-slug="@root.Slug">
+                                    <i class="bi @root.Icon"></i>
+                                    <strong>Tout le rayon @root.Name</strong>
+                                    <span>@root.Category.Description</span>
+                                    <em>Découvrir <i class="bi bi-arrow-right"></i></em>
+                                </a>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            <div class="ms-auto d-flex">
+                <a class="catnav-link promo-link" asp-page="/Shop/Promotions"><i class="bi bi-lightning-charge-fill"></i> Promotions</a>
+            </div>
+        </div>
+    </nav>
+</header>
+
+@if (flash != null)
+{
+    <div class="container-xl mt-3">
+        <div class="flash flash-@flashKind"><i class="bi @(flashKind == "success" ? "bi-check-circle-fill" : "bi-exclamation-triangle-fill")"></i> @flash</div>
+    </div>
+}
+
+<main class="shop-main">
+    @RenderBody()
+</main>
+
+<!-- ===== Avantages ===== -->
+<section class="perks">
+    <div class="container-xl">
+        <div class="perks-grid">
+            <div class="perk"><i class="bi bi-truck"></i><div><strong>Livraison rapide</strong><span>Le jour même ou au créneau de votre choix</span></div></div>
+            <div class="perk"><i class="bi bi-cash-coin"></i><div><strong>Paiement à la livraison</strong><span>En espèces ou par carte (TPE)</span></div></div>
+            <div class="perk"><i class="bi bi-patch-check"></i><div><strong>Fraîcheur garantie</strong><span>Produits frais contrôlés chaque matin</span></div></div>
+            <div class="perk"><i class="bi bi-headset"></i><div><strong>Service client</strong><span>7j/7 de 8h à 22h au 05 22 00 00 00</span></div></div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== Pied de page ===== -->
+<footer class="shop-footer">
+    <div class="container-xl">
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <a class="logo logo-light" asp-page="/Shop/Index">
+                    <span class="logo-mark"><i class="bi bi-basket2-fill"></i></span>
+                    <span class="logo-text">Super<b>Marché</b></span>
+                </a>
+                <p class="mt-3">Votre supermarché de quartier, maintenant en ligne. Plus de 1 000 produits du quotidien livrés chez vous.</p>
+                <div class="socials">
+                    <a href="#" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+                    <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+                    <a href="#" aria-label="WhatsApp"><i class="bi bi-whatsapp"></i></a>
+                </div>
+            </div>
+            <div class="col-6 col-lg-2">
+                <h6>Rayons</h6>
+                @foreach (var root in tree) { <a asp-page="/Shop/Category" asp-route-slug="@root.Slug">@root.Name</a> }
+            </div>
+            <div class="col-6 col-lg-2">
+                <h6>Mon compte</h6>
+                <a asp-page="/Shop/Account/Index">Mes commandes</a>
+                <a asp-page="/Shop/Cart">Mon panier</a>
+                <a asp-page="/Shop/Account/Register">Créer un compte</a>
+                <a asp-page="/Shop/Promotions">Promotions</a>
+            </div>
+            <div class="col-6 col-lg-2">
+                <h6>Aide</h6>
+                <a asp-page="/Shop/Delivery">Livraison & zones</a>
+                <a asp-page="/Shop/Delivery" asp-fragment="paiement">Moyens de paiement</a>
+                <a asp-page="/Shop/Delivery" asp-fragment="faq">Questions fréquentes</a>
+            </div>
+            <div class="col-6 col-lg-2">
+                <h6>Contact</h6>
+                <span><i class="bi bi-geo-alt"></i> Bd Zerktouni, Casablanca</span>
+                <span><i class="bi bi-telephone"></i> 05 22 00 00 00</span>
+                <span><i class="bi bi-envelope"></i> contact@supermarche.ma</span>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <span>© @DateTime.Now.Year SuperMarché — Tous droits réservés</span>
+            <a asp-page="/Index"><i class="bi bi-shield-lock"></i> Espace employés</a>
+        </div>
+    </div>
+</footer>
+
+<!-- ===== Tiroir panier ===== -->
+<div class="offcanvas offcanvas-end cart-drawer" tabindex="-1" id="cartDrawer" aria-labelledby="cartDrawerLabel">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="cartDrawerLabel"><i class="bi bi-bag"></i> Mon panier</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Fermer"></button>
+    </div>
+    <div class="offcanvas-body p-0" id="cartDrawerBody" data-src="@Url.Page("/Shop/Cart", "Mini")">
+        <div class="drawer-loading"><div class="spinner-border text-success"></div></div>
+    </div>
+</div>
+
+<!-- ===== Menu mobile ===== -->
+<div class="offcanvas offcanvas-start menu-drawer" tabindex="-1" id="menuDrawer">
+    <div class="offcanvas-header">
+        <a class="logo" asp-page="/Shop/Index"><span class="logo-mark"><i class="bi bi-basket2-fill"></i></span><span class="logo-text">Super<b>Marché</b></span></a>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+        <a class="menu-promo" asp-page="/Shop/Promotions"><i class="bi bi-lightning-charge-fill"></i> Promotions de la semaine</a>
+        <div class="accordion accordion-flush" id="menuAcc">
+            @foreach (var root in tree)
+            {
+                <div class="accordion-item" style="--c:@root.Color">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#m@(root.Id)">
+                            <span class="menu-ico"><i class="bi @root.Icon"></i></span> @root.Name
+                        </button>
+                    </h2>
+                    <div id="m@(root.Id)" class="accordion-collapse collapse" data-bs-parent="#menuAcc">
+                        <div class="accordion-body">
+                            <a asp-page="/Shop/Category" asp-route-slug="@root.Slug" class="fw-semibold">Tout le rayon</a>
+                            @foreach (var sub in root.Children) { <a asp-page="/Shop/Category" asp-route-slug="@sub.Slug">@sub.Name</a> }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+        <div class="menu-links">
+            <a asp-page="/Shop/Account/Index"><i class="bi bi-person"></i> Mon compte</a>
+            <a asp-page="/Shop/Delivery"><i class="bi bi-truck"></i> Livraison</a>
+            <a href="tel:0522000000"><i class="bi bi-telephone"></i> 05 22 00 00 00</a>
+        </div>
+    </div>
+</div>
+
+<div class="toast-zone" id="toastZone" aria-live="polite"></div>
+
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/shop.js" asp-append-version="true"></script>
+<script src="~/js/password-toggle.js" asp-append-version="true"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

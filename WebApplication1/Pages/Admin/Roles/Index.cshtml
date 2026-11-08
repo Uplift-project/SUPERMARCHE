@@ -1,0 +1,54 @@
+@page
+@model WebApplication1.Pages.Admin.Roles.IndexModel
+@{
+    ViewData["Title"] = "Rôles & accès";
+}
+<div class="page-header">
+    <div>
+        <h1>Rôles & accès</h1>
+        <p>Chaque rôle définit ce que l'employé peut voir et faire</p>
+    </div>
+    <a asp-page="Edit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Nouveau rôle</a>
+</div>
+
+<div class="row g-4">
+    @foreach (var (role, users) in Model.Roles)
+    {
+        var perms = role.PermissionSet;
+        <div class="col-md-6 col-xl-4">
+            <div class="card-app h-100 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h2 class="mb-1">@role.Name</h2>
+                        <div class="small text-muted mb-2">@role.Description</div>
+                    </div>
+                    @if (role.IsSuperAdmin) { <span class="badge-soft violet">Accès total</span> }
+                </div>
+                <div class="small mb-3"><i class="bi bi-people"></i> @users employé(s)</div>
+                <div class="d-flex flex-wrap gap-1 mb-3">
+                    @if (role.IsSuperAdmin)
+                    {
+                        <span class="badge-soft green">Toutes les permissions</span>
+                    }
+                    else
+                    {
+                        @foreach (var g in Permissions.Groups)
+                        {
+                            var n = g.Items.Count(i => perms.Contains(i.Key));
+                            if (n > 0) { <span class="badge-soft gray">@g.Name @n/@g.Items.Length</span> }
+                        }
+                    }
+                </div>
+                <div class="mt-auto d-flex gap-2">
+                    @if (!role.IsSuperAdmin)
+                    {
+                        <a asp-page="Edit" asp-route-id="@role.Id" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i> Modifier les accès</a>
+                        <form method="post" asp-page-handler="Delete" asp-route-id="@role.Id" onsubmit="return confirm('Supprimer ce rôle ?')">
+                            <button class="btn btn-sm btn-light text-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>

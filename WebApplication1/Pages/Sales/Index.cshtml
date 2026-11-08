@@ -1,0 +1,53 @@
+@page
+@model WebApplication1.Pages.Sales.IndexModel
+@{
+    ViewData["Title"] = "Ventes";
+}
+<div class="page-header">
+    <div>
+        <h1>Ventes</h1>
+        <p>Historique des tickets de caisse</p>
+    </div>
+    @if (Model.Can(Permissions.SalesCreate))
+    {
+        <a asp-page="New" class="btn btn-primary"><i class="bi bi-cart-plus"></i> Nouvelle vente</a>
+    }
+</div>
+
+<div class="card-app">
+    <form method="get" class="filters">
+        <input asp-for="Q" class="form-control" placeholder="N° de vente ou client…" />
+        <select asp-for="UserId" asp-items="Model.Users" class="form-select"><option value="">Tous les caissiers</option></select>
+        <input asp-for="From" type="date" class="form-control" />
+        <input asp-for="To" type="date" class="form-control" />
+        <button class="btn btn-outline-secondary"><i class="bi bi-search"></i> Filtrer</button>
+        <a asp-page="Index" class="btn btn-link">Réinitialiser</a>
+    </form>
+
+    <div class="d-flex gap-3 mb-3 small">
+        <span class="badge-soft blue">@Model.Count vente(s)</span>
+        <span class="badge-soft green">Total : @Model.Total.ToString("N2") DH</span>
+        @if (Model.Count > 0) { <span class="badge-soft gray">Panier moyen : @((Model.Total / Model.Count).ToString("N2")) DH</span> }
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-app table-hover">
+            <thead><tr><th>N°</th><th>Date</th><th>Client</th><th>Caissier</th><th class="num">Articles</th><th class="num">Remise</th><th class="num">Total</th></tr></thead>
+            <tbody>
+                @foreach (var s in Model.Sales.Items)
+                {
+                    <tr>
+                        <td><a asp-page="Details" asp-route-id="@s.Id" class="fw-semibold text-decoration-none">@s.Number</a></td>
+                        <td class="small">@s.Date.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>@if (s.Customer != null) { <a asp-page="/Customers/Details" asp-route-id="@s.CustomerId" class="text-decoration-none">@s.Customer.FullName</a> } else { <span class="text-muted">Anonyme</span> }</td>
+                        <td class="small">@s.User?.FullName</td>
+                        <td class="num">@s.Items.Sum(i => i.Quantity)</td>
+                        <td class="num small text-muted">@(s.Discount > 0 ? "-" + s.Discount.ToString("N2") : "")</td>
+                        <td class="num fw-semibold">@s.Total.ToString("N2") DH</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <partial name="_Pager" model="new PagerInfo(Model.Sales.Page, Model.Sales.TotalPages, Model.Sales.Total)" />
+</div>

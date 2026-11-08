@@ -1,0 +1,102 @@
+@page
+@model WebApplication1.Pages.Products.IndexModel
+@{
+    ViewData["Title"] = "Produits";
+}
+<div class="page-header">
+    <div>
+        <h1>Produits</h1>
+        <p>Catalogue du magasin et niveaux de stock</p>
+    </div>
+    <div class="d-flex gap-2">
+        @if (Model.Access.CanAny(Permissions.StockIn, Permissions.StockOut))
+        {
+            <a asp-page="/Stock/Move" class="btn btn-outline-primary"><i class="bi bi-arrow-left-right"></i> Mouvement de stock</a>
+        }
+        @if (Model.Can(Permissions.ProductsCreate))
+        {
+            <a asp-page="Edit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Nouveau produit</a>
+        }
+    </div>
+</div>
+
+<div class="card-app">
+    <form method="get" class="filters">
+        <input asp-for="Q" class="form-control" placeholder="Nom ou code-barres…" />
+        <select asp-for="CategoryId" asp-items="Model.Categories" class="form-select"><option value="">Toutes catégories</option></select>
+        <select asp-for="Stock" class="form-select">
+            <option value="">Tout le stock</option>
+            <option value="low">Stock faible</option>
+            <option value="out">En rupture</option>
+        </select>
+        <select asp-for="Status" class="form-select">
+            <option value="">Actifs</option>
+            <option value="inactive">Désactivés</option>
+            <option value="all">Tous</option>
+        </select>
+        <button class="btn btn-outline-secondary"><i class="bi bi-search"></i> Filtrer</button>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-app table-hover">
+            <thead>
+                <tr>
+                    <th>Produit</th>
+                    <th>Catégorie</th>
+                    <th class="num">Prix</th>
+                    <th class="num">Stock</th>
+                    <th>État</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model.Products.Items)
+                {
+                    var disc = Model.Discounts.GetValueOrDefault(p.Id);
+                    <tr class="@(p.IsActive ? "" : "opacity-50")">
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="product-thumb">@if (!string.IsNullOrEmpty(p.ImageUrl)) { <img src="@p.ImageUrl" alt="" loading="lazy" /> } else { @(p.Emoji ?? "📦") }</span>
+                                <div>
+                                    <a asp-page="Details" asp-route-id="@p.Id" class="fw-semibold text-decoration-none">@p.Name</a>
+                                    @if (p.IsFeatured) { <i class="bi bi-star-fill text-warning small" title="Mis en avant sur la boutique"></i> }
+                                    <div class="small text-muted">@p.Barcode</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>@p.Category?.Name</td>
+                        <td class="num">
+                            @if (disc > 0)
+                            {
+                                <span class="badge-soft violet me-1">-@disc.ToString("0")%</span>
+                            }
+                            @p.Price.ToString("N2") DH
+                        </td>
+                        <td class="num fw-semibold">@p.Quantity <span class="text-muted fw-normal small">@p.Unit</span></td>
+                        <td>
+                            @if (!p.IsActive) { <span class="badge-soft gray">Désactivé</span> }
+                            else if (p.Quantity == 0) { <span class="badge-soft red">Rupture</span> }
+                            else if (p.IsLowStock) { <span class="badge-soft amber">Stock faible</span> }
+                            else { <span class="badge-soft green">OK</span> }
+                        </td>
+                        <td class="text-end text-nowrap">
+                            <a asp-page="Details" asp-route-id="@p.Id" class="btn btn-sm btn-light" title="Détails"><i class="bi bi-eye"></i></a>
+                            @if (Model.Can(Permissions.ProductsEdit))
+                            {
+                                <a asp-page="Edit" asp-route-id="@p.Id" class="btn btn-sm btn-light" title="Modifier"><i class="bi bi-pencil"></i></a>
+                            }
+                            @if (Model.Can(Permissions.ProductsDelete))
+                            {
+                                <form method="post" asp-page-handler="Delete" asp-route-id="@p.Id" class="d-inline"
+                                      onsubmit="return confirm('Supprimer « @p.Name » ?')">
+                                    <button class="btn btn-sm btn-light text-danger" title="Supprimer"><i class="bi bi-trash"></i></button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <partial name="_Pager" model="new PagerInfo(Model.Products.Page, Model.Products.TotalPages, Model.Products.Total)" />
+</div>

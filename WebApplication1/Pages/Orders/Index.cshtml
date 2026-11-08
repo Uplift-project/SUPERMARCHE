@@ -1,0 +1,64 @@
+@page
+@model WebApplication1.Pages.Orders.IndexModel
+@{
+    ViewData["Title"] = "Commandes en ligne";
+    string Tab(OrderStatus? s) => Url.Page("Index", new { status = s, q = Model.Q, day = Model.Day?.ToString("yyyy-MM-dd") })!;
+}
+<div class="page-header">
+    <div>
+        <h1>Commandes en ligne</h1>
+        <p>Commandes passées sur la boutique, à préparer et livrer</p>
+    </div>
+    <a asp-page="/Shop/Index" target="_blank" class="btn btn-outline-primary"><i class="bi bi-shop"></i> Ouvrir la boutique</a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3"><div class="stat-tile"><div class="label"><i class="bi bi-hourglass-split"></i> À confirmer</div><div class="value">@Model.CountByStatus.GetValueOrDefault(OrderStatus.Pending)</div><div class="sub">en attente d'appel client</div></div></div>
+    <div class="col-6 col-lg-3"><div class="stat-tile"><div class="label"><i class="bi bi-box-seam"></i> En préparation</div><div class="value">@(Model.CountByStatus.GetValueOrDefault(OrderStatus.Confirmed) + Model.CountByStatus.GetValueOrDefault(OrderStatus.Preparing))</div><div class="sub">confirmées + en préparation</div></div></div>
+    <div class="col-6 col-lg-3"><div class="stat-tile"><div class="label"><i class="bi bi-truck"></i> À livrer aujourd'hui</div><div class="value">@Model.ToDeliverToday</div><div class="sub">@Model.CountByStatus.GetValueOrDefault(OrderStatus.Shipping) en route</div></div></div>
+    <div class="col-6 col-lg-3"><div class="stat-tile"><div class="label"><i class="bi bi-cash-coin"></i> Encaissé aujourd'hui</div><div class="value">@Model.DeliveredToday.ToString("N0") <small class="fs-6 text-muted">DH</small></div><div class="sub">commandes livrées</div></div></div>
+</div>
+
+<div class="card-app">
+    <div class="status-tabs">
+        <a href="@Tab(null)" class="@(Model.Status == null ? "active" : "")">Toutes <span>@Model.CountByStatus.Values.Sum()</span></a>
+        @foreach (var s in Enum.GetValues<OrderStatus>())
+        {
+            <a href="@Tab(s)" class="@(Model.Status == s ? "active" : "")">@s.Label() <span>@Model.CountByStatus.GetValueOrDefault(s)</span></a>
+        }
+    </div>
+
+    <form method="get" class="filters">
+        <input type="hidden" name="status" value="@Model.Status" />
+        <input asp-for="Q" class="form-control" placeholder="N°, client, téléphone, ville…" />
+        <input asp-for="Day" type="date" class="form-control" title="Date de livraison" />
+        <button class="btn btn-outline-secondary"><i class="bi bi-search"></i> Filtrer</button>
+        <a asp-page="Index" class="btn btn-link">Réinitialiser</a>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-app table-hover">
+            <thead><tr><th>N°</th><th>Passée le</th><th>Client</th><th>Livraison</th><th class="num">Articles</th><th>Paiement</th><th>Statut</th><th class="num">Total</th></tr></thead>
+            <tbody>
+                @foreach (var o in Model.Orders.Items)
+                {
+                    <tr>
+                        <td><a asp-page="Details" asp-route-id="@o.Id" class="fw-semibold text-decoration-none">@o.Number</a></td>
+                        <td class="small text-nowrap">@o.CreatedAt.ToString("dd/MM HH:mm")</td>
+                        <td>@o.FullName<div class="small text-muted">@o.Phone</div></td>
+                        <td class="small">@o.DeliveryDate.ToString("ddd dd/MM") · @o.DeliverySlot<div class="text-muted">@o.City</div></td>
+                        <td class="num">@o.Items.Sum(i => i.Quantity)</td>
+                        <td class="small">@(o.PaymentMethod == PaymentMethod.CashOnDelivery ? "Espèces" : "Carte (TPE)")</td>
+                        <td><span class="badge-soft @o.Status.BadgeColor()">@o.Status.Label()</span></td>
+                        <td class="num fw-semibold">@o.Total.ToString("N2") DH</td>
+                    </tr>
+                }
+                @if (Model.Orders.Items.Count == 0)
+                {
+                    <tr><td colspan="8" class="text-center text-muted py-4">Aucune commande.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <partial name="_Pager" model="new PagerInfo(Model.Orders.Page, Model.Orders.TotalPages, Model.Orders.Total)" />
+</div>

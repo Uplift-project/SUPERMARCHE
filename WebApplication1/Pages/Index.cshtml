@@ -1,0 +1,130 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Tableau de bord";
+    var delta = Model.RevenuePrev30 == 0 ? (decimal?)null : (Model.Revenue30 - Model.RevenuePrev30) / Model.RevenuePrev30 * 100;
+}
+
+<div class="page-header">
+    <div>
+        <h1>Bonjour, @Model.Access.User?.FullName.Split(' ')[0] 👋</h1>
+        <p>Voici l'état du magasin aujourd'hui, @DateTime.Today.ToString("dddd d MMMM yyyy", new System.Globalization.CultureInfo("fr-FR"))</p>
+    </div>
+    @if (Model.Can(Permissions.SalesCreate))
+    {
+        <a asp-page="/Sales/New" class="btn btn-primary"><i class="bi bi-cart-plus"></i> Nouvelle vente</a>
+    }
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-xl-3">
+        <div class="stat-tile">
+            <div class="label"><i class="bi bi-cash-coin"></i> Chiffre d'affaires du jour</div>
+            <div class="value">@Model.RevenueToday.ToString("N2") DH</div>
+            <div class="sub">@Model.SalesToday vente(s) aujourd'hui</div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="stat-tile">
+            <div class="label"><i class="bi bi-graph-up-arrow"></i> CA des 30 derniers jours</div>
+            <div class="value">@Model.Revenue30.ToString("N0") DH</div>
+            <div class="sub">
+                @if (delta != null)
+                {
+                    <span style="color:@(delta >= 0 ? "#006300" : "#b91c1c")">
+                        <i class="bi @(delta >= 0 ? "bi-arrow-up-right" : "bi-arrow-down-right")"></i> @delta.Value.ToString("+0.0;-0.0")%
+                    </span> <text>vs 30 jours précédents</text>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="stat-tile">
+            <div class="label"><i class="bi bi-people"></i> Clients</div>
+            <div class="value">@Model.CustomersCount</div>
+            <div class="sub">+@Model.NewCustomers30 ce mois-ci</div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="stat-tile">
+            <div class="label"><i class="bi bi-exclamation-triangle"></i> Alertes stock</div>
+            <div class="value" style="color:@(Model.LowStockCount > 0 ? "#b91c1c" : "inherit")">@Model.LowStockCount</div>
+            <div class="sub">@Model.ActivePromotions promotion(s) en cours</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-8">
+        <div class="card-app h-100">
+            <h2>Chiffre d'affaires — 14 derniers jours (DH)</h2>
+            <div class="chart-box"><canvas id="revenueChart" aria-label="Chiffre d'affaires par jour"></canvas></div>
+        </div>
+    </div>
+    <div class="col-xl-4">
+        <div class="card-app h-100">
+            <h2><i class="bi bi-exclamation-triangle text-danger"></i> Produits à réapprovisionner</h2>
+            @if (!Model.LowStock.Any())
+            {
+                <p class="text-muted">Tous les stocks sont au-dessus du seuil d'alerte. ✅</p>
+            }
+            else
+            {
+                <ul class="list-group list-group-flush">
+                    @foreach (var p in Model.LowStock)
+                    {
+                        <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                            <div>
+                                <a asp-page="/Products/Details" asp-route-id="@p.Id" class="fw-semibold text-decoration-none">@p.Name</a>
+                                <div class="small text-muted">@p.Category?.Name · seuil @p.MinQuantity</div>
+                            </div>
+                            <span class="badge-soft @(p.Quantity == 0 ? "red" : "amber")">@(p.Quantity == 0 ? "Rupture" : $"{p.Quantity} {p.Unit}")</span>
+                        </li>
+                    }
+                </ul>
+                @if (Model.Can(Permissions.StockIn))
+                {
+                    <a asp-page="/Stock/Move" class="btn btn-sm btn-outline-primary mt-2"><i class="bi bi-plus-lg"></i> Entrée de stock</a>
+                }
+            }
+        </div>
+    </div>
+
+    @if (Model.Can(Permissions.SalesView))
+    {
+        <div class="col-xl-5">
+            <div class="card-app h-100">
+                <div class="d-flex justify-content-between"><h2>Dernières ventes</h2><a asp-page="/Sales/Index" class="small">Tout voir</a></div>
+                <table class="table table-app table-hover">
+                    <tbody>
+                        @foreach (var s in Model.LatestSales)
+                        {
+                            <tr>
+                                <td><a asp-page="/Sales/Details" asp-route-id="@s.Id" class="text-decoration-none">@s.Number</a>
+                                    <div class="small text-muted">@s.Date.ToString("dd/MM HH:mm") · @(s.User?.FullName ?? "—")</div></td>
+                                <td class="small">@(s.Customer?.FullName ?? "Client anonyme")</td>
+                                <td class="num fw-semibold">@s.Total.ToString("N2") DH</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+    @if (Model.Can(Permissions.AuditView))
+    {
+        <div class="col-xl-7">
+            <div class="card-app h-100">
+                <div class="d-flex justify-content-between"><h2>Activité récente des employés</h2><a asp-page="/Admin/Audit/Index" class="small">Journal complet</a></div>
+                <partial name="_AuditTable" model="Model.LatestActivity" />
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script>
+        appBarChart('revenueChart', @Json.Serialize(Model.ChartLabels), @Json.Serialize(Model.ChartValues), { label: 'CA' });
+    </script>
+}

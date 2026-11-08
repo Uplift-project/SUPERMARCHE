@@ -1,0 +1,147 @@
+@page
+@model WebApplication1.Pages.Sales.NewModel
+@{
+    ViewData["Title"] = "Caisse";
+}
+<div class="page-header">
+    <div>
+        <h1>Caisse — nouvelle vente</h1>
+        <p>Caissier : @Model.Access.User?.FullName · les promotions en cours sont appliquées automatiquement</p>
+    </div>
+</div>
+
+<form method="post" id="saleForm">
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card-app">
+                <h2>Ajouter des articles</h2>
+                <div class="input-group mb-3">
+                    <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
+                    <input id="search" class="form-control" placeholder="Scanner un code-barres ou taper un nom…" autocomplete="off" autofocus />
+                </div>
+                <div class="list-group" id="results" style="max-height:420px;overflow:auto"></div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card-app">
+                <h2>Panier</h2>
+                <div class="mb-3">
+                    <label class="form-label small">Client (optionnel — pour la fidélité)</label>
+                    <select asp-for="CustomerId" class="form-select">
+                        <option value="">Client anonyme</option>
+                        @foreach (var c in Model.Customers)
+                        {
+                            <option value="@c.Id">@c.FullName @(c.Phone != null ? $"({c.Phone})" : "")</option>
+                        }
+                    </select>
+                </div>
+
+                <table class="table table-app">
+                    <tbody id="cart"></tbody>
+                </table>
+                <p class="text-muted text-center my-4" id="emptyCart">Le panier est vide.</p>
+
+                <div class="border-top pt-3">
+                    <div class="d-flex justify-content-between small text-muted"><span>Sous-total</span><span id="subtotal">0.00 DH</span></div>
+                    <div class="d-flex justify-content-between small text-muted"><span>Remises promotions</span><span id="discount">0.00 DH</span></div>
+                    <div class="d-flex justify-content-between fs-4 fw-bold mt-1"><span>Total</span><span id="total">0.00 DH</span></div>
+                </div>
+                <div id="hiddenLines"></div>
+                <button class="btn btn-primary w-100 py-2 mt-3" id="submitBtn" disabled><i class="bi bi-check2-circle"></i> Valider la vente</button>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        (function () {
+            const products = @Json.Serialize(Model.Products);
+            const cart = new Map(); // id -> qty
+            @foreach (var l in Model.Lines.Where(l => l.Quantity > 0))
+            {
+                @:cart.set(@l.ProductId, (cart.get(@l.ProductId) || 0) + @l.Quantity);
+            }
+            const money = v => v.toFixed(2) + ' DH';
+            const byId = id => products.find(p => p.id === id);
+            const search = document.getElementById('search');
+            const results = document.getElementById('results');
+
+            function renderResults() {
+                const q = search.value.trim().toLowerCase();
+                const list = (q ? products.filter(p => p.name.toLowerCase().includes(q) || (p.barcode || '').includes(q)) : products).slice(0, 40);
+                results.innerHTML = '';
+                list.forEach(p => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+                    btn.disabled = p.stock <= 0;
+                    const price = p.discount > 0
+                        ? `<span class="badge-soft violet me-1">-${p.discount}%</span><s class="text-muted small">${money(p.price)}</s> ${money(p.price * (1 - p.discount / 100))}`
+                        : money(p.price);
+                    btn.innerHTML = `<span><strong></strong><br><small class="text-muted"></small></span><span class="text-end">${price}</span>`;
+                    btn.querySelector('strong').textContent = p.name;
+                    btn.querySelector('small').textContent = `${p.category} · stock ${p.stock} ${p.unit}`;
+                    btn.addEventListener('click', () => add(p.id));
+                    results.appendChild(btn);
+                });
+            }
+
+            function add(id, n = 1) {
+                const p = byId(id);
+                const next = (cart.get(id) || 0) + n;
+                if (next <= 0) cart.delete(id);
+                else cart.set(id, Math.min(next, p.stock));
+                renderCart();
+            }
+
+            function renderCart() {
+                const body = document.getElementById('cart');
+                const hidden = document.getElementById('hiddenLines');
+                body.innerHTML = ''; hidden.innerHTML = '';
+                let sub = 0, tot = 0, i = 0;
+                cart.forEach((qty, id) => {
+                    const p = byId(id);
+                    if (!p) return;
+                    const line = p.price * qty, lineNet = line * (1 - p.discount / 100);
+                    sub += line; tot += lineNet;
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td><span class="fw-semibold"></span><div class="small text-muted">${money(p.price)}${p.discount ? ' · -' + p.discount + '%' : ''}</div></td>
+                        <td class="text-nowrap"><div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-light" data-d="-1">−</button>
+                            <span class="btn btn-light disabled text-body">${qty}</span>
+                            <button type="button" class="btn btn-light" data-d="1">+</button></div></td>
+                        <td class="num fw-semibold">${money(lineNet)}</td>
+                        <td><button type="button" class="btn btn-sm btn-link text-danger p-0" data-del><i class="bi bi-x-lg"></i></button></td>`;
+                    tr.querySelector('.fw-semibold').textContent = p.name;
+                    tr.querySelectorAll('[data-d]').forEach(b => b.onclick = () => add(id, +b.dataset.d));
+                    tr.querySelector('[data-del]').onclick = () => { cart.delete(id); renderCart(); };
+                    body.appendChild(tr);
+                    hidden.insertAdjacentHTML('beforeend',
+                        `<input type="hidden" name="Lines[${i}].ProductId" value="${id}"><input type="hidden" name="Lines[${i}].Quantity" value="${qty}">`);
+                    i++;
+                });
+                document.getElementById('subtotal').textContent = money(sub);
+                document.getElementById('discount').textContent = '-' + money(sub - tot);
+                document.getElementById('total').textContent = money(tot);
+                document.getElementById('emptyCart').hidden = cart.size > 0;
+                document.getElementById('submitBtn').disabled = cart.size === 0;
+            }
+
+            search.addEventListener('input', renderResults);
+            search.addEventListener('keydown', e => {
+                if (e.key !== 'Enter') return;
+                e.preventDefault();
+                const q = search.value.trim();
+                const exact = products.find(p => p.barcode === q);
+                if (exact) { add(exact.id); search.value = ''; renderResults(); }
+            });
+            document.getElementById('saleForm').addEventListener('submit', () => {
+                document.getElementById('submitBtn').disabled = true;
+            });
+            renderResults();
+            renderCart();
+        })();
+    </script>
+}

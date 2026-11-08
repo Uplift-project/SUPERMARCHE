@@ -1,0 +1,40 @@
+@page "/promotions"
+@model WebApplication1.Pages.Shop.PromotionsModel
+@{
+    ViewData["Title"] = "Promotions";
+}
+<div class="promo-hero">
+    <div class="container-xl">
+        <span class="eyebrow"><i class="bi bi-lightning-charge-fill"></i> Offres de la semaine</span>
+        <h1>Promotions</h1>
+        <p>@Model.Running.Count offre(s) en cours, appliquées automatiquement dans votre panier.</p>
+        <div class="promo-list">
+            @foreach (var pr in Model.Running)
+            {
+                <div class="promo-pill">
+                    <b>-@pr.DiscountPercent.ToString("0")%</b>
+                    <span>@pr.Name<small>@(pr.Category?.Name ?? pr.Product?.Name) · jusqu'au @pr.EndDate.ToString("dd/MM/yyyy")</small></span>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="container-xl">
+    @if (Model.Groups.Count == 0)
+    {
+        <div class="empty my-5"><span>🏷️</span><h3>Pas de promotion en ce moment</h3><p>Revenez bientôt, de nouvelles offres arrivent chaque semaine.</p></div>
+    }
+    @foreach (var g in Model.Groups)
+    {
+        <section class="section dept-section" style="--c:@g.Root.Color">
+            <div class="section-head">
+                <div><h2><span class="dot"></span> @g.Root.Name</h2><p>@g.Products.Count produit(s) en promotion</p></div>
+                <a class="see-all" asp-page="/Shop/Category" asp-route-slug="@g.Root.Slug" asp-route-promo="true">Tout voir <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <div class="pgrid pgrid-wide">
+                @foreach (var c in g.Products) { <partial name="_ProductCard" model="c" /> }
+            </div>
+        </section>
+    }
+</div>

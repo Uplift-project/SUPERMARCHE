@@ -1,0 +1,69 @@
+@page "/livraison"
+@{
+    ViewData["Title"] = "Livraison & paiement";
+}
+<div class="promo-hero info-hero">
+    <div class="container-xl">
+        <span class="eyebrow"><i class="bi bi-truck"></i> Service de livraison</span>
+        <h1>Livraison & paiement</h1>
+        <p>Vos courses livrées à domicile, au créneau qui vous arrange. Vous payez à la réception.</p>
+    </div>
+</div>
+
+<div class="container-xl section">
+    <div class="info-grid">
+        <div class="panel">
+            <h2 class="panel-title"><i class="bi bi-cash-coin"></i> Tarifs</h2>
+            <div class="sum-row"><span>Commande à partir de 300 DH</span><strong class="text-success">Gratuite</strong></div>
+            <div class="sum-row"><span>Commande de moins de 300 DH</span><strong>@Services.Data.DbSeeder.DeliveryFeeAmount.ToString("0") DH</strong></div>
+            <p class="text-muted small mt-2 mb-0">Le montant pris en compte est celui après remises.</p>
+        </div>
+        <div class="panel">
+            <h2 class="panel-title"><i class="bi bi-clock"></i> Créneaux</h2>
+            <div class="chips">
+                @foreach (var s in OrderService.DeliverySlots) { <span class="chip">@s</span> }
+            </div>
+            <p class="text-muted small mt-3 mb-0">7j/7. Commandez avant 14h pour être livré le jour même (selon disponibilité).</p>
+        </div>
+        <div class="panel">
+            <h2 class="panel-title"><i class="bi bi-geo-alt"></i> Villes desservies</h2>
+            <div class="chips">
+                @foreach (var c in OrderService.Cities) { <span class="chip">@c</span> }
+            </div>
+        </div>
+        <div class="panel" id="paiement">
+            <h2 class="panel-title"><i class="bi bi-wallet2"></i> Paiement</h2>
+            @foreach (var m in Enum.GetValues<PaymentMethod>())
+            {
+                <p class="mb-2"><i class="bi bi-check2-circle text-success"></i> @m.Label()</p>
+            }
+            <p class="text-muted small mb-0">Aucun paiement en ligne : vous réglez uniquement quand vous recevez vos courses.</p>
+        </div>
+    </div>
+
+    <div class="panel mt-4" id="faq">
+        <h2 class="panel-title"><i class="bi bi-question-circle"></i> Questions fréquentes</h2>
+        <div class="accordion accordion-flush faq" id="faqAcc">
+            @{
+                var faq = new[]
+                {
+                    ("Comment suivre ma commande ?", "Connectez-vous à votre compte, rubrique « Mes commandes » : chaque étape (confirmée, en préparation, en livraison, livrée) y est affichée."),
+                    ("Puis-je annuler ma commande ?", "Oui, gratuitement depuis votre compte tant qu'elle n'est pas en préparation. Ensuite, appelez le service client."),
+                    ("Un produit est manquant ou abîmé ?", "Signalez-le au livreur ou appelez-nous dans les 24h : nous le remplaçons ou le déduisons de votre prochaine commande."),
+                    ("Les prix sont-ils les mêmes qu'en magasin ?", "Oui, mêmes prix et mêmes promotions qu'en magasin. Les promotions sont appliquées automatiquement dans le panier."),
+                };
+            }
+            @for (var i = 0; i < faq.Length; i++)
+            {
+                <div class="accordion-item">
+                    <h3 class="accordion-header">
+                        <button class="accordion-button @(i > 0 ? "collapsed" : "")" type="button" data-bs-toggle="collapse" data-bs-target="#faq@(i)">@faq[i].Item1</button>
+                    </h3>
+                    <div id="faq@(i)" class="accordion-collapse collapse @(i == 0 ? "show" : "")" data-bs-parent="#faqAcc">
+                        <div class="accordion-body">@faq[i].Item2</div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>

@@ -1,0 +1,82 @@
+@page "{id:int}"
+@model WebApplication1.Pages.Products.DetailsModel
+@{
+    ViewData["Title"] = Model.Product.Name;
+    var p = Model.Product;
+    var margin = p.Price > 0 ? (p.Price - p.CostPrice) / p.Price * 100 : 0;
+}
+<div class="page-header">
+    <div>
+        <h1>@p.Name</h1>
+        <p>@p.Category?.Name · Code-barres @(p.Barcode ?? "—")</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-page="Index" class="btn btn-light"><i class="bi bi-arrow-left"></i> Retour</a>
+        @if (Model.Access.CanAny(Permissions.StockIn, Permissions.StockOut))
+        {
+            <a asp-page="/Stock/Move" asp-route-productId="@p.Id" class="btn btn-outline-primary"><i class="bi bi-arrow-left-right"></i> Entrée / Sortie</a>
+        }
+        @if (Model.Can(Permissions.ProductsEdit))
+        {
+            <a asp-page="Edit" asp-route-id="@p.Id" class="btn btn-primary"><i class="bi bi-pencil"></i> Modifier</a>
+        }
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="stat-tile">
+            <div class="label">Stock actuel</div>
+            <div class="value" style="color:@(p.IsLowStock ? "#b91c1c" : "inherit")">@p.Quantity <small class="fs-6 text-muted">@p.Unit</small></div>
+            <div class="sub">Seuil d'alerte : @p.MinQuantity @(p.IsLowStock ? "⚠️" : "")</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-tile">
+            <div class="label">Prix de vente</div>
+            <div class="value">@p.Price.ToString("N2") DH</div>
+            <div class="sub">
+                @if (Model.Discount > 0)
+                {
+                    <span class="badge-soft violet">Promo -@Model.Discount.ToString("0")% → @((p.Price * (1 - Model.Discount / 100)).ToString("N2")) DH</span>
+                }
+                else { <text>Aucune promotion en cours</text> }
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-tile">
+            <div class="label">Marge</div>
+            <div class="value">@margin.ToString("0.0")%</div>
+            <div class="sub">Prix d'achat : @p.CostPrice.ToString("N2") DH</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-tile">
+            <div class="label">Vendus (30 jours)</div>
+            <div class="value">@Model.SoldLast30</div>
+            <div class="sub">@Model.RevenueLast30.ToString("N2") DH de CA</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    @if (Model.Can(Permissions.StockView))
+    {
+        <div class="col-xl-6">
+            <div class="card-app h-100">
+                <h2>Mouvements de stock — qui a ajouté / retiré</h2>
+                <partial name="_MovementsTable" model="Model.Movements" view-data='new ViewDataDictionary(ViewData) { ["HideProduct"] = true }' />
+            </div>
+        </div>
+    }
+    @if (Model.Can(Permissions.AuditView))
+    {
+        <div class="col-xl-6">
+            <div class="card-app h-100">
+                <h2>Historique des modifications</h2>
+                <partial name="_AuditTable" model="Model.History" />
+            </div>
+        </div>
+    }
+</div>

@@ -1,0 +1,94 @@
+@page "/p/{id:int}/{slug?}"
+@model WebApplication1.Pages.Shop.ProductModel
+@{
+    var c = Model.Card;
+    var p = c.Product;
+    var n = Model.Node;
+    ViewData["Title"] = p.Name;
+    ViewData["Description"] = p.Description ?? $"{p.Name} — {n.Name}. Livraison à domicile.";
+    var stockMsg = p.Quantity <= 0 ? ("out", "Épuisé — bientôt de retour")
+                 : p.Quantity <= p.MinQuantity ? ("low", $"Plus que {p.Quantity} en stock")
+                 : ("ok", "En stock — livrable aujourd'hui");
+}
+
+<div class="container-xl pt-3" style="--c:@c.Color">
+    <nav class="crumbs crumbs-dark">
+        <a asp-page="/Shop/Index"><i class="bi bi-house"></i> Accueil</a>
+        @foreach (var a in n.Ancestors().Append(n)) { <i class="bi bi-chevron-right"></i><a asp-page="/Shop/Category" asp-route-slug="@a.Slug">@a.Name</a> }
+    </nav>
+
+    <div class="pdp">
+        <div class="pdp-media">
+            @if (!string.IsNullOrEmpty(p.ImageUrl)) { <img src="@p.ImageUrl" alt="@p.Name" /> }
+            else { <span class="pdp-emoji">@(p.Emoji ?? "🛒")</span> }
+            @if (c.Discount > 0) { <span class="tag tag-promo tag-lg">-@c.Discount.ToString("0")%</span> }
+        </div>
+
+        <div class="pdp-info">
+            <a class="pdp-cat" asp-page="/Shop/Category" asp-route-slug="@n.Slug"><i class="bi @n.Icon"></i> @n.Name</a>
+            <h1>@p.Name</h1>
+            <div class="pdp-meta">
+                <span>Vendu à l'unité : <strong>@p.Unit</strong></span>
+                @if (p.Barcode != null) { <span>Réf. @p.Barcode</span> }
+            </div>
+
+            <div class="pdp-price">
+                <strong>@c.FinalPrice.ToString("N2") <small>DH</small></strong>
+                @if (c.Discount > 0)
+                {
+                    <del>@p.Price.ToString("N2") DH</del>
+                    <span class="save">Vous économisez @((p.Price - c.FinalPrice).ToString("N2")) DH</span>
+                }
+            </div>
+
+            <div class="stock stock-@stockMsg.Item1"><i class="bi bi-circle-fill"></i> @stockMsg.Item2</div>
+
+            @if (p.Quantity > 0)
+            {
+                <form method="post" asp-page="/Shop/Cart" asp-page-handler="Add" data-cart data-open-drawer class="pdp-buy">
+                    <input type="hidden" name="productId" value="@p.Id" />
+                    <div class="qty">
+                        <button type="button" data-step="-1" aria-label="Moins"><i class="bi bi-dash"></i></button>
+                        <input type="number" name="qty" value="1" min="1" max="@Math.Min(p.Quantity, 99)" aria-label="Quantité" />
+                        <button type="button" data-step="1" aria-label="Plus"><i class="bi bi-plus"></i></button>
+                    </div>
+                    <button class="btn-shop btn-buy" type="submit"><i class="bi bi-bag-plus"></i> Ajouter au panier</button>
+                </form>
+                @if (Model.InCart > 0)
+                {
+                    <p class="in-cart"><i class="bi bi-check2-circle"></i> Déjà @Model.InCart dans votre <a asp-page="/Shop/Cart">panier</a></p>
+                }
+            }
+            else
+            {
+                <div class="pdp-buy">
+                    <button class="btn-shop btn-buy" type="button" disabled><i class="bi bi-bag-x"></i> Produit épuisé</button>
+                </div>
+            }
+
+            <ul class="pdp-perks">
+                <li><i class="bi bi-truck"></i> <span><strong>Livraison</strong> gratuite dès 300 DH, sinon 20 DH</span></li>
+                <li><i class="bi bi-cash-coin"></i> <span><strong>Paiement</strong> à la livraison : espèces ou carte</span></li>
+                <li><i class="bi bi-arrow-repeat"></i> <span><strong>Satisfait ou remboursé</strong> sur les produits frais</span></li>
+            </ul>
+
+            @if (!string.IsNullOrWhiteSpace(p.Description))
+            {
+                <div class="pdp-desc">
+                    <h2>Description</h2>
+                    <p>@p.Description</p>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (Model.Similar.Count > 0)
+    {
+        <section class="section">
+            <div class="section-head"><div><h2>Vous aimerez aussi</h2><p>Dans le rayon @(n.Parent?.Name ?? n.Name)</p></div></div>
+            <div class="rail" data-rail>
+                @foreach (var s in Model.Similar) { <partial name="_ProductCard" model="s" /> }
+            </div>
+        </section>
+    }
+</div>

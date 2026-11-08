@@ -1,0 +1,120 @@
+﻿@inject UserAccessService AccessService
+@inject Services.Data.AppDbContext Db
+@{
+    var access = await AccessService.GetAsync();
+    var pendingOrders = access.Can(Permissions.OrdersView)
+        ? await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.CountAsync(Db.Orders, o => o.Status == OrderStatus.Pending)
+        : 0;
+    var currentPage = ViewContext.RouteData.Values["page"]?.ToString() ?? "";
+
+    var menu = new (string? Section, string Permission, string Page, string Folder, string Icon, string Label)[]
+    {
+        (null, Permissions.DashboardView, "/Index", "/Index", "bi-speedometer2", "Tableau de bord"),
+        ("Magasin", Permissions.SalesCreate, "/Sales/New", "/Sales/New", "bi-cart-plus", "Caisse"),
+        (null, Permissions.SalesView, "/Sales/Index", "/Sales/I", "bi-receipt", "Ventes"),
+        (null, Permissions.OrdersView, "/Orders/Index", "/Orders/", "bi-truck", "Commandes en ligne"),
+        (null, Permissions.CustomersView, "/Customers/Index", "/Customers/", "bi-people", "Clients"),
+        ("Catalogue & Stock", Permissions.ProductsView, "/Products/Index", "/Products/", "bi-box-seam", "Produits"),
+        (null, Permissions.CategoriesView, "/Categories/Index", "/Categories/", "bi-tags", "Catégories"),
+        (null, Permissions.StockView, "/Stock/Index", "/Stock/", "bi-arrow-left-right", "Mouvements de stock"),
+        (null, Permissions.PromotionsView, "/Promotions/Index", "/Promotions/", "bi-percent", "Promotions"),
+        ("Pilotage", Permissions.AnalyticsView, "/Analytics/Index", "/Analytics/", "bi-graph-up", "Analyses"),
+        (null, Permissions.AuditView, "/Admin/Audit/Index", "/Admin/Audit/", "bi-clock-history", "Journal d'activité"),
+        ("Administration", Permissions.UsersManage, "/Admin/Users/Index", "/Admin/Users/", "bi-person-badge", "Employés"),
+        (null, Permissions.RolesManage, "/Admin/Roles/Index", "/Admin/Roles/", "bi-shield-lock", "Rôles & accès"),
+    };
+    string? pendingSection = null;
+}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - SuperMarché Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..800&display=swap" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+<div class="app-shell">
+    <aside class="app-sidebar" id="sidebar">
+        <a class="brand" asp-page="/Index"><i class="bi bi-basket2-fill"></i> SuperMarché</a>
+        <nav>
+            @foreach (var item in menu)
+            {
+                if (item.Section != null) { pendingSection = item.Section; }
+                if (!access.Can(item.Permission)) { continue; }
+                if (pendingSection != null)
+                {
+                    <div class="nav-section">@pendingSection</div>
+                    pendingSection = null;
+                }
+                var active = currentPage.StartsWith(item.Folder, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+                <a class="side-link @active" asp-page="@item.Page"><i class="bi @item.Icon"></i> @item.Label
+                    @if (item.Page == "/Orders/Index" && pendingOrders > 0) { <span class="side-badge">@pendingOrders</span> }
+                </a>
+            }
+        </nav>
+    </aside>
+
+    <div class="app-main">
+        <header class="app-topbar">
+            <button class="btn btn-sm btn-outline-secondary d-lg-none" type="button"
+                    onclick="document.getElementById('sidebar').classList.toggle('open')">
+                <i class="bi bi-list"></i>
+            </button>
+            <p class="topbar-title d-none d-md-block">SuperMarché <span class="mx-1">/</span> <strong>@ViewData["Title"]</strong></p>
+            <div class="ms-auto d-flex align-items-center gap-3">
+                <a asp-page="/Shop/Index" target="_blank" class="btn btn-sm btn-light d-none d-sm-inline-flex" style="width:auto;padding:0 .75rem">
+                    <i class="bi bi-shop"></i> Voir la boutique
+                </a>
+                @if (access.User != null)
+                {
+                    <div class="dropdown">
+                        <a class="user-chip dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                            <span class="avatar">@access.User.FullName[..1].ToUpper()</span>
+                            <span class="d-none d-sm-inline">
+                                <strong>@access.User.FullName</strong>
+                                <small class="d-block text-muted">@access.User.Role?.Name</small>
+                            </span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" asp-page="/Account/Profile"><i class="bi bi-person"></i> Mon profil</a></li>
+                            <li><hr class="dropdown-divider" /></li>
+                            <li>
+                                <form method="post" asp-page="/Account/Logout">
+                                    <button class="dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> Se déconnecter</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                }
+            </div>
+        </header>
+
+        <main class="app-content">
+            @if (TempData["success"] is string ok)
+            {
+                <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle"></i> @ok
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+            }
+            @if (TempData["error"] is string err)
+            {
+                <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle"></i> @err
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+            }
+            @RenderBody()
+        </main>
+    </div>
+</div>
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+<script src="~/js/password-toggle.js" asp-append-version="true"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

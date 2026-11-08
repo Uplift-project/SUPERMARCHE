@@ -1,0 +1,135 @@
+@page "/"
+@model WebApplication1.Pages.Shop.IndexModel
+@{
+    ViewData["Title"] = null;
+    string ColorOf(Promotion pr)
+    {
+        var catId = pr.CategoryId ?? pr.Product?.CategoryId;
+        return Model.Roots.SelectMany(r => r.SelfAndDescendants()).FirstOrDefault(n => n.Id == catId)?.Color ?? "#1f7a4d";
+    }
+    string? SlugOf(Promotion pr) => pr.Category?.Slug;
+}
+
+<!-- ===== Héros ===== -->
+<section class="container-xl hero">
+    <div class="hero-main">
+        <div class="hero-copy">
+            <span class="eyebrow"><i class="bi bi-lightning-charge-fill"></i> Livraison en 2h dans votre ville</span>
+            <h1>Vos courses du quotidien, <span>livrées chez vous.</span></h1>
+            <p>Fruits et légumes frais, épicerie, beauté, entretien… Commandez en quelques clics et payez à la livraison.</p>
+            <div class="hero-cta">
+                <a class="btn-shop btn-shop-light" href="#rayons">Découvrir les rayons <i class="bi bi-arrow-right"></i></a>
+                <a class="btn-shop btn-shop-ghost" asp-page="/Shop/Promotions"><i class="bi bi-tag"></i> Voir les promos</a>
+            </div>
+            <ul class="hero-points">
+                <li><i class="bi bi-check2-circle"></i> Gratuit dès 300 DH</li>
+                <li><i class="bi bi-check2-circle"></i> Paiement à la livraison</li>
+                <li><i class="bi bi-check2-circle"></i> Créneau au choix</li>
+            </ul>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+            <span class="bubble b1">🍅</span><span class="bubble b2">🥖</span><span class="bubble b3">🧴</span>
+            <span class="bubble b4">🍊</span><span class="bubble b5">🥛</span><span class="bubble b6">🧺</span>
+            <div class="hero-basket"><i class="bi bi-basket2-fill"></i></div>
+        </div>
+    </div>
+    <div class="hero-side">
+        @foreach (var pr in Model.RunningPromos.Take(2))
+        {
+            var target = SlugOf(pr);
+            <a class="promo-tile" style="--c:@ColorOf(pr)"
+               href="@(target != null ? Url.Page("/Shop/Category", new { slug = target }) : Url.Page("/Shop/Product", new { id = pr.ProductId, slug = Slug.From(pr.Product?.Name) }))">
+                <span class="promo-pct">-@pr.DiscountPercent.ToString("0")%</span>
+                <strong>@pr.Name</strong>
+                <span>@(pr.Category?.Name ?? pr.Product?.Name) · jusqu'au @pr.EndDate.ToString("dd/MM")</span>
+                <em>J'en profite <i class="bi bi-arrow-right"></i></em>
+            </a>
+        }
+        @* Pas (assez) de promotions en cours : on complète avec les rayons. *@
+        @foreach (var root in Model.Roots.Take(Math.Max(0, 2 - Model.RunningPromos.Count)))
+        {
+            <a class="promo-tile" style="--c:@root.Color" asp-page="/Shop/Category" asp-route-slug="@root.Slug">
+                <span class="promo-pct"><i class="bi @root.Icon"></i></span>
+                <strong>@root.Name</strong>
+                <span>@root.Category.Description</span>
+                <em>Découvrir <i class="bi bi-arrow-right"></i></em>
+            </a>
+        }
+    </div>
+</section>
+
+<!-- ===== Rayons ===== -->
+<section class="container-xl section" id="rayons">
+    <div class="section-head">
+        <div><h2>Nos rayons</h2><p>Chaque rayon a sa couleur : retrouvez vite ce que vous cherchez.</p></div>
+    </div>
+    <div class="dept-grid">
+        @foreach (var root in Model.Roots)
+        {
+            <div class="dept" style="--c:@root.Color">
+                <a class="dept-head" asp-page="/Shop/Category" asp-route-slug="@root.Slug">
+                    <span class="dept-ico"><i class="bi @root.Icon"></i></span>
+                    <span><strong>@root.Name</strong><small>@root.Children.Count catégories</small></span>
+                    <i class="bi bi-arrow-right ms-auto"></i>
+                </a>
+                <div class="dept-subs">
+                    @foreach (var sub in root.Children.Take(6))
+                    {
+                        <a asp-page="/Shop/Category" asp-route-slug="@sub.Slug">@sub.Name</a>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</section>
+
+@if (Model.Deals.Count > 0)
+{
+    <section class="container-xl section">
+        <div class="section-head">
+            <div><h2><i class="bi bi-lightning-charge-fill text-warning"></i> Bons plans du moment</h2><p>Remises valables pour une durée limitée.</p></div>
+            <a class="see-all" asp-page="/Shop/Promotions">Toutes les promos <i class="bi bi-arrow-right"></i></a>
+        </div>
+        <div class="rail" data-rail>
+            @foreach (var c in Model.Deals) { <partial name="_ProductCard" model="c" /> }
+        </div>
+    </section>
+}
+
+@foreach (var rail in Model.Rails)
+{
+    <section class="container-xl section dept-section" style="--c:@rail.Root.Color">
+        <div class="section-head">
+            <div>
+                <h2><span class="dot"></span> @rail.Root.Name</h2>
+                <div class="chips">
+                    @foreach (var sub in rail.Root.Children) { <a class="chip" asp-page="/Shop/Category" asp-route-slug="@sub.Slug">@sub.Name</a> }
+                </div>
+            </div>
+            <a class="see-all" asp-page="/Shop/Category" asp-route-slug="@rail.Root.Slug">Voir les @rail.Total produits <i class="bi bi-arrow-right"></i></a>
+        </div>
+        <div class="rail" data-rail>
+            @foreach (var c in rail.Products) { <partial name="_ProductCard" model="c" /> }
+        </div>
+    </section>
+}
+
+@if (Model.BestSellers.Count > 0)
+{
+    <section class="container-xl section">
+        <div class="section-head">
+            <div><h2><i class="bi bi-fire text-danger"></i> Les plus achetés</h2><p>Les favoris de nos clients ce mois-ci.</p></div>
+        </div>
+        <div class="rail" data-rail>
+            @foreach (var c in Model.BestSellers) { <partial name="_ProductCard" model="c" /> }
+        </div>
+    </section>
+}
+
+<section class="container-xl section">
+    <div class="how">
+        <div class="how-step"><span>1</span><div><strong>Remplissez votre panier</strong><p>Parcourez les rayons ou recherchez un produit.</p></div></div>
+        <div class="how-step"><span>2</span><div><strong>Choisissez votre créneau</strong><p>Aujourd'hui ou les jours suivants, de 9h à 21h.</p></div></div>
+        <div class="how-step"><span>3</span><div><strong>Recevez & payez</strong><p>En espèces ou par carte à la livraison.</p></div></div>
+    </div>
+</section>

@@ -1,0 +1,119 @@
+@page "{id:int}"
+@model WebApplication1.Pages.Orders.DetailsModel
+@{
+    var o = Model.Order;
+    ViewData["Title"] = "Commande " + o.Number;
+    var flow = new[] { OrderStatus.Pending, OrderStatus.Confirmed, OrderStatus.Preparing, OrderStatus.Shipping, OrderStatus.Delivered };
+    var idx = Array.IndexOf(flow, o.Status);
+    var next = OrderService.NextStatuses(o.Status);
+    var canManage = Model.Can(Permissions.OrdersManage);
+}
+<div class="page-header">
+    <div>
+        <h1>Commande @o.Number <span class="badge-soft @o.Status.BadgeColor() align-middle fs-6">@o.Status.Label()</span></h1>
+        <p>Passée le @o.CreatedAt.ToString("dd/MM/yyyy à HH:mm")@(o.UpdatedAt != null ? " · mise à jour le " + o.UpdatedAt.Value.ToString("dd/MM HH:mm") : "")</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-page="Index" class="btn btn-light" style="width:auto;padding:0 .9rem"><i class="bi bi-arrow-left"></i> Retour</a>
+        <button class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> Bon de préparation</button>
+    </div>
+</div>
+
+<div class="card-app mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        @if (o.Status == OrderStatus.Cancelled)
+        {
+            <span class="badge-soft red">Commande annulée — le stock a été remis en rayon.</span>
+        }
+        else
+        {
+            <div class="order-steps">
+                @for (var i = 0; i < flow.Length; i++)
+                {
+                    <span class="step @(i < idx ? "done" : i == idx ? "current" : "")"><i class="bi @(i < idx ? "bi-check-lg" : flow[i].Icon())"></i> @flow[i].Label()</span>
+                }
+            </div>
+        }
+        @if (canManage && next.Length > 0)
+        {
+            <div class="d-flex gap-2">
+                @foreach (var s in next)
+                {
+                    <form method="post" asp-page-handler="Status" asp-route-id="@o.Id" class="d-inline"
+                          onsubmit="@(s == OrderStatus.Cancelled ? "return confirm('Annuler cette commande ? Le stock sera remis en rayon.')" : "")">
+                        <input type="hidden" name="status" value="@s" />
+                        @if (s == OrderStatus.Cancelled)
+                        {
+                            <button class="btn btn-outline-secondary text-danger"><i class="bi bi-x-circle"></i> Annuler</button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-primary"><i class="bi @s.Icon()"></i> Passer à « @s.Label() »</button>
+                        }
+                    </form>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-8">
+        <div class="card-app">
+            <h2><i class="bi bi-basket"></i> Articles à préparer</h2>
+            <table class="table table-app">
+                <thead><tr><th>Produit</th><th class="num">Qté</th><th class="num">Prix unit.</th><th class="num">Remise</th><th class="num">Total</th></tr></thead>
+                <tbody>
+                    @foreach (var i in o.Items)
+                    {
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="product-thumb">@if (!string.IsNullOrEmpty(i.Product?.ImageUrl)) { <img src="@i.Product.ImageUrl" alt="" /> } else { @(i.Product?.Emoji ?? "📦") }</span>
+                                    <div>
+                                        @if (i.Product != null) { <a asp-page="/Products/Details" asp-route-id="@i.ProductId" class="fw-semibold text-decoration-none">@i.ProductName</a> } else { @i.ProductName }
+                                        <div class="small text-muted">@i.Product?.Barcode · stock actuel @i.Product?.Quantity</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="num fw-bold">@i.Quantity</td>
+                            <td class="num">@i.UnitPrice.ToString("N2")</td>
+                            <td class="num">@(i.DiscountPercent > 0 ? "-" + i.DiscountPercent.ToString("0.#") + "%" : "")</td>
+                            <td class="num fw-semibold">@i.LineTotal.ToString("N2") DH</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr><td colspan="4" class="text-end text-muted">Sous-total</td><td class="num">@o.SubTotal.ToString("N2") DH</td></tr>
+                    <tr><td colspan="4" class="text-end text-muted">Remises</td><td class="num">-@o.Discount.ToString("N2") DH</td></tr>
+                    <tr><td colspan="4" class="text-end text-muted">Livraison</td><td class="num">@o.DeliveryFee.ToString("N2") DH</td></tr>
+                    <tr><td colspan="4" class="text-end fw-bold">Total à encaisser</td><td class="num fw-bold fs-5">@o.Total.ToString("N2") DH</td></tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+    <div class="col-xl-4">
+        <div class="card-app mb-4">
+            <h2><i class="bi bi-person"></i> Client</h2>
+            <p class="mb-1 fw-semibold">
+                @if (o.CustomerId != null && Model.Can(Permissions.CustomersView)) { <a asp-page="/Customers/Details" asp-route-id="@o.CustomerId">@o.FullName</a> } else { @o.FullName }
+            </p>
+            <p class="mb-1"><i class="bi bi-telephone"></i> <a href="tel:@o.Phone">@o.Phone</a></p>
+            @if (!string.IsNullOrEmpty(o.Email)) { <p class="mb-0 small text-muted"><i class="bi bi-envelope"></i> @o.Email</p> }
+        </div>
+        <div class="card-app mb-4">
+            <h2><i class="bi bi-truck"></i> Livraison</h2>
+            <p class="mb-1"><strong>@o.DeliveryDate.ToString("dddd dd MMMM yyyy")</strong> · @o.DeliverySlot</p>
+            <p class="mb-1">@o.Address<br />@o.City</p>
+            <p class="mb-1"><i class="bi bi-wallet2"></i> @o.PaymentMethod.Label()</p>
+            @if (!string.IsNullOrEmpty(o.Notes)) { <div class="alert alert-warning small mb-0 mt-2"><i class="bi bi-chat-left-text"></i> @o.Notes</div> }
+        </div>
+        @if (Model.History.Count > 0)
+        {
+            <div class="card-app">
+                <h2><i class="bi bi-clock-history"></i> Historique</h2>
+                <partial name="_AuditTable" model="Model.History" />
+            </div>
+        }
+    </div>
+</div>

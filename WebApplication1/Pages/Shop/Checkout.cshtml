@@ -1,0 +1,155 @@
+@page "/commande"
+@model WebApplication1.Pages.Shop.CheckoutModel
+@{
+    ViewData["Title"] = "Livraison & paiement";
+    var q = Model.Quote;
+}
+<div class="container-xl section">
+    <div class="steps">
+        <a class="step done" asp-page="/Shop/Cart"><b><i class="bi bi-check"></i></b> Panier</a><i></i>
+        <span class="step active"><b>2</b> Livraison & paiement</span><i></i>
+        <span class="step"><b>3</b> Confirmation</span>
+    </div>
+
+    <form method="post" class="checkout-grid" novalidate>
+        <div>
+            <div asp-validation-summary="ModelOnly" class="flash flash-error mb-3"></div>
+
+            @if (!Model.LoggedIn)
+            {
+                <div class="panel login-hint">
+                    <i class="bi bi-person-circle"></i>
+                    <div><strong>Déjà client ?</strong> Connectez-vous pour retrouver vos adresses et suivre vos commandes.</div>
+                    <a class="btn-shop btn-shop-outline btn-sm" asp-page="/Shop/Account/Login" asp-route-returnUrl="/commande">Se connecter</a>
+                </div>
+            }
+
+            <div class="panel">
+                <h2 class="panel-title"><span>1</span> Vos coordonnées</h2>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" asp-for="Input.FullName">Nom complet</label>
+                        <input class="form-control" asp-for="Input.FullName" autocomplete="name" />
+                        <span asp-validation-for="Input.FullName" class="field-error"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" asp-for="Input.Phone">Téléphone</label>
+                        <input class="form-control" asp-for="Input.Phone" type="tel" placeholder="06 12 34 56 78" autocomplete="tel" />
+                        <span asp-validation-for="Input.Phone" class="field-error"></span>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" asp-for="Input.Email">Email <small class="text-muted">(facultatif, pour recevoir le suivi)</small></label>
+                        <input class="form-control" asp-for="Input.Email" type="email" autocomplete="email" />
+                        <span asp-validation-for="Input.Email" class="field-error"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2 class="panel-title"><span>2</span> Adresse de livraison</h2>
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label" asp-for="Input.Address">Adresse</label>
+                        <input class="form-control" asp-for="Input.Address" placeholder="N°, rue, quartier, étage…" autocomplete="street-address" />
+                        <span asp-validation-for="Input.Address" class="field-error"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" asp-for="Input.City">Ville</label>
+                        <select class="form-select" asp-for="Input.City">
+                            @foreach (var c in OrderService.Cities) { <option value="@c">@c</option> }
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" asp-for="Input.Notes">Instructions pour le livreur <small class="text-muted">(facultatif)</small></label>
+                        <textarea class="form-control" asp-for="Input.Notes" rows="2" placeholder="Code d'entrée, point de repère…"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2 class="panel-title"><span>3</span> Jour & créneau de livraison</h2>
+                <div class="day-picker">
+                    @foreach (var d in Model.Days)
+                    {
+                        var label = d == DateTime.Today ? "Aujourd'hui" : d == DateTime.Today.AddDays(1) ? "Demain" : d.ToString("dddd");
+                        <label class="day">
+                            <input type="radio" name="Input.DeliveryDate" value="@d.ToString("yyyy-MM-dd")" checked="@(d.Date == Model.Input.DeliveryDate.Date)" />
+                            <span><small>@label</small><b>@d.ToString("dd")</b><small>@d.ToString("MMM")</small></span>
+                        </label>
+                    }
+                </div>
+                <div class="slot-picker">
+                    @foreach (var s in OrderService.DeliverySlots)
+                    {
+                        <label class="slot" data-slot="@s">
+                            <input type="radio" name="Input.DeliverySlot" value="@s" checked="@(s == Model.Input.DeliverySlot)" />
+                            <span><i class="bi bi-clock"></i> @s</span>
+                        </label>
+                    }
+                </div>
+                <span asp-validation-for="Input.DeliverySlot" class="field-error"></span>
+            </div>
+
+            <div class="panel">
+                <h2 class="panel-title"><span>4</span> Paiement</h2>
+                <div class="pay-options">
+                    @foreach (var m in Enum.GetValues<PaymentMethod>())
+                    {
+                        <label class="pay">
+                            <input type="radio" name="Input.PaymentMethod" value="@m" checked="@(m == Model.Input.PaymentMethod)" />
+                            <span>
+                                <i class="bi @(m == PaymentMethod.CashOnDelivery ? "bi-cash-stack" : "bi-credit-card-2-front")"></i>
+                                <b>@m.Label()</b>
+                                <small>@(m == PaymentMethod.CashOnDelivery ? "Préparez l'appoint si possible." : "Le livreur vient avec un terminal de paiement.")</small>
+                            </span>
+                        </label>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <aside class="panel summary">
+            <h2>Votre commande</h2>
+            <div class="mini-lines">
+                @foreach (var l in q.Lines)
+                {
+                    <div class="mini-line">
+                        <span class="mini-ico">@if (!string.IsNullOrEmpty(l.Product.ImageUrl)) { <img src="@l.Product.ImageUrl" alt="" /> } else { @(l.Product.Emoji ?? "🛒") }<b>@l.Quantity</b></span>
+                        <span class="mini-name">@l.Product.Name</span>
+                        <span>@l.LineTotal.ToString("N2")</span>
+                    </div>
+                }
+            </div>
+            <div class="sum-row"><span>Sous-total</span><span>@q.SubTotal.ToString("N2") DH</span></div>
+            @if (q.Discount > 0) { <div class="sum-row text-danger"><span>Remises</span><span>-@q.Discount.ToString("N2") DH</span></div> }
+            <div class="sum-row"><span>Livraison</span><span>@(q.DeliveryFee == 0 ? "Gratuite" : q.DeliveryFee.ToString("N2") + " DH")</span></div>
+            <div class="sum-row total"><span>À payer à la livraison</span><span>@q.Total.ToString("N2") DH</span></div>
+            <button class="btn-shop w-100" type="submit"><i class="bi bi-lock"></i> Confirmer la commande</button>
+            <p class="legal">En confirmant, vous acceptez nos conditions de vente. Vous ne payez qu'à la réception.</p>
+        </aside>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        // Les créneaux déjà passés aujourd'hui ne sont pas proposés.
+        (() => {
+            const passed = @Json.Serialize(OrderService.DeliverySlots.Where(s => WebApplication1.Pages.Shop.CheckoutModel.SlotPassed(DateTime.Today, s)));
+            const today = '@DateTime.Today.ToString("yyyy-MM-dd")';
+            const refresh = () => {
+                const day = document.querySelector('input[name="Input.DeliveryDate"]:checked')?.value;
+                document.querySelectorAll('.slot').forEach(l => {
+                    const off = day === today && passed.includes(l.dataset.slot);
+                    const r = l.querySelector('input');
+                    r.disabled = off; l.classList.toggle('is-off', off);
+                    if (off && r.checked) {
+                        r.checked = false;
+                        document.querySelector('.slot:not(.is-off) input')?.click();
+                    }
+                });
+            };
+            document.querySelectorAll('input[name="Input.DeliveryDate"]').forEach(r => r.addEventListener('change', refresh));
+            refresh();
+        })();
+    </script>
+}

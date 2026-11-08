@@ -1,0 +1,78 @@
+@page "/compte/commandes/{number}"
+@model WebApplication1.Pages.Shop.Account.OrderModel
+@{
+    var o = Model.Order;
+    ViewData["Title"] = "Commande " + o.Number;
+    var steps = new[] { OrderStatus.Pending, OrderStatus.Confirmed, OrderStatus.Preparing, OrderStatus.Shipping, OrderStatus.Delivered };
+    var current = Array.IndexOf(steps, o.Status);
+    var canCancel = o.Status is OrderStatus.Pending or OrderStatus.Confirmed;
+}
+<div class="container-xl section">
+    <a class="link-back mb-3 d-inline-flex" asp-page="/Shop/Account/Index"><i class="bi bi-arrow-left"></i> Mes commandes</a>
+
+    <div class="panel">
+        <div class="panel-head flex-wrap gap-2">
+            <div>
+                <h1 class="mb-1">Commande @o.Number</h1>
+                <p class="text-muted mb-0">Passée le @o.CreatedAt.ToString("dd/MM/yyyy à HH:mm")</p>
+            </div>
+            <span class="status-pill status-@o.Status.BadgeColor() fs-6"><i class="bi @o.Status.Icon()"></i> @o.Status.Label()</span>
+        </div>
+
+        @if (o.Status == OrderStatus.Cancelled)
+        {
+            <div class="flash flash-error"><i class="bi bi-x-circle-fill"></i> Cette commande a été annulée. Les articles n'ont pas été facturés.</div>
+        }
+        else
+        {
+            <ol class="tracker">
+                @for (var i = 0; i < steps.Length; i++)
+                {
+                    <li class="@(i < current ? "done" : i == current ? "current" : "")">
+                        <span><i class="bi @(i < current ? "bi-check-lg" : steps[i].Icon())"></i></span>
+                        <b>@steps[i].Label()</b>
+                    </li>
+                }
+            </ol>
+        }
+    </div>
+
+    <div class="checkout-grid mt-4">
+        <div class="panel">
+            <h2 class="panel-title"><i class="bi bi-basket"></i> Articles</h2>
+            @foreach (var i in o.Items)
+            {
+                <div class="mini-line">
+                    <span class="mini-ico">@if (!string.IsNullOrEmpty(i.Product?.ImageUrl)) { <img src="@i.Product.ImageUrl" alt="" /> } else { @(i.Product?.Emoji ?? "🛒") }<b>@i.Quantity</b></span>
+                    <span class="mini-name">@i.ProductName
+                        <small class="d-block text-muted">@i.UnitPrice.ToString("N2") DH @if (i.DiscountPercent > 0) { <b class="text-danger">-@i.DiscountPercent.ToString("0")%</b> }</small>
+                    </span>
+                    <span>@i.LineTotal.ToString("N2") DH</span>
+                </div>
+            }
+            <div class="sum-row mt-3"><span>Sous-total</span><span>@o.SubTotal.ToString("N2") DH</span></div>
+            @if (o.Discount > 0) { <div class="sum-row text-danger"><span>Remises</span><span>-@o.Discount.ToString("N2") DH</span></div> }
+            <div class="sum-row"><span>Livraison</span><span>@(o.DeliveryFee == 0 ? "Gratuite" : o.DeliveryFee.ToString("N2") + " DH")</span></div>
+            <div class="sum-row total"><span>Total</span><span>@o.Total.ToString("N2") DH</span></div>
+        </div>
+
+        <aside class="panel summary">
+            <h2>Livraison</h2>
+            <p class="info-line"><i class="bi bi-calendar-event"></i> <span>@o.DeliveryDate.ToString("dddd dd MMMM yyyy")<br /><strong>@o.DeliverySlot</strong></span></p>
+            <p class="info-line"><i class="bi bi-geo-alt"></i> <span>@o.FullName<br />@o.Address<br />@o.City</span></p>
+            <p class="info-line"><i class="bi bi-telephone"></i> <span>@o.Phone</span></p>
+            <p class="info-line"><i class="bi bi-wallet2"></i> <span>@o.PaymentMethod.Label()</span></p>
+            @if (!string.IsNullOrEmpty(o.Notes)) { <p class="info-line"><i class="bi bi-chat-left-text"></i> <span>@o.Notes</span></p> }
+
+            <form method="post" asp-page-handler="Reorder" asp-route-number="@o.Number">
+                <button class="btn-shop w-100"><i class="bi bi-arrow-repeat"></i> Commander à nouveau</button>
+            </form>
+            @if (canCancel)
+            {
+                <form method="post" asp-page-handler="Cancel" asp-route-number="@o.Number" onsubmit="return confirm('Annuler cette commande ?')" class="mt-2">
+                    <button class="btn-shop btn-shop-danger w-100"><i class="bi bi-x-circle"></i> Annuler la commande</button>
+                </form>
+            }
+        </aside>
+    </div>
+</div>

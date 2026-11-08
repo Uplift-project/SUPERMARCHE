@@ -1,0 +1,46 @@
+@page "/erreur/{code:int?}"
+@model WebApplication1.Pages.Shop.ErrorModel
+@{
+    // Page autonome (sans layout) : elle doit s'afficher même si la base de données est indisponible.
+    Layout = null;
+    var notFound = Model.Code == 404;
+    var title = notFound ? "Page introuvable" : "Une erreur est survenue";
+}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>@title — SuperMarché</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/shop.css" asp-append-version="true" />
+</head>
+<body class="shop">
+    <div class="container-xl" style="min-height:100vh;display:grid;place-items:center;padding:2rem 1rem">
+        <div class="empty" style="max-width:560px;width:100%">
+            <span>@(notFound ? "🧺" : "🛠️")</span>
+            <h3>@title</h3>
+            <p>
+                @if (notFound)
+                {
+                    <text>Ce produit ou cette page n'existe pas (ou plus). Il a peut-être été retiré du catalogue.</text>
+                }
+                else
+                {
+                    <text>Nous n'avons pas pu traiter votre demande. Réessayez dans un instant ; si le problème continue, contactez-nous au 05 22 00 00 00.</text>
+                }
+            </p>
+            <div class="d-flex gap-2 justify-content-center flex-wrap">
+                <a class="btn-shop" href="/">Retour à la boutique</a>
+                <a class="btn-shop btn-shop-outline" href="/recherche">Rechercher un produit</a>
+            </div>
+            @if (!notFound)
+            {
+                <p class="small text-muted mt-3 mb-0">Référence : <code>@Model.RequestId</code></p>
+            }
+        </div>
+    </div>
+</body>
+</html>

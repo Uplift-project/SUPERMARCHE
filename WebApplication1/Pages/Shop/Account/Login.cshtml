@@ -1,0 +1,42 @@
+@page "/compte/connexion"
+@model WebApplication1.Pages.Shop.Account.LoginModel
+@{
+    ViewData["Title"] = "Connexion";
+}
+<div class="container-xl section">
+    <div class="auth-split">
+        <div class="auth-pane">
+            <h1>Connexion</h1>
+            <p class="text-muted">Accédez à vos commandes et à vos adresses enregistrées.</p>
+            <form method="post" novalidate>
+                <div asp-validation-summary="ModelOnly" class="flash flash-error mb-3"></div>
+                <input type="hidden" asp-for="ReturnUrl" />
+                <div class="mb-3">
+                    <label class="form-label" asp-for="Email">Email</label>
+                    <input class="form-control form-control-lg" asp-for="Email" autocomplete="email" autofocus />
+                    <span asp-validation-for="Email" class="field-error"></span>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" asp-for="Password">Mot de passe</label>
+                    <input class="form-control form-control-lg" asp-for="Password" autocomplete="current-password" />
+                    <span asp-validation-for="Password" class="field-error"></span>
+                </div>
+                <div class="form-check mb-4">
+                    <input class="form-check-input" asp-for="RememberMe" />
+                    <label class="form-check-label" asp-for="RememberMe">Rester connecté</label>
+                </div>
+                <button class="btn-shop w-100">Se connecter</button>
+            </form>
+            <p class="mt-4 mb-0 text-center">Nouveau client ? <a asp-page="/Shop/Account/Register" asp-route-returnUrl="@Model.ReturnUrl" class="fw-semibold">Créer un compte</a></p>
+        </div>
+        <div class="auth-aside">
+            <h2>Pourquoi créer un compte ?</h2>
+            <ul>
+                <li><i class="bi bi-geo-alt"></i> Adresse et téléphone pré-remplis</li>
+                <li><i class="bi bi-truck"></i> Suivi de livraison en temps réel</li>
+                <li><i class="bi bi-arrow-counterclockwise"></i> Annulation en un clic avant préparation</li>
+                <li><i class="bi bi-star"></i> Points fidélité sur chaque commande</li>
+            </ul>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,78 @@
+@page
+@model WebApplication1.Pages.Customers.IndexModel
+@{
+    ViewData["Title"] = "Clients";
+    var canManage = Model.Can(Permissions.CustomersManage);
+}
+<div class="page-header">
+    <div>
+        <h1>Clients</h1>
+        <p>Suivi des clients : visites, dépenses et fidélité</p>
+    </div>
+    @if (canManage)
+    {
+        <a asp-page="Edit" class="btn btn-primary"><i class="bi bi-person-plus"></i> Nouveau client</a>
+    }
+</div>
+
+<div class="card-app">
+    <form method="get" class="filters">
+        <input asp-for="Q" class="form-control" placeholder="Nom, téléphone, email…" />
+        <select asp-for="City" class="form-select">
+            <option value="">Toutes les villes</option>
+            @foreach (var c in Model.Cities) { <option>@c</option> }
+        </select>
+        <select asp-for="Sort" class="form-select">
+            <option value="spent">Trier : plus gros acheteurs</option>
+            <option value="visits">Trier : plus de visites</option>
+            <option value="recent">Trier : visite la plus récente</option>
+            <option value="points">Trier : points fidélité</option>
+            <option value="name">Trier : nom</option>
+        </select>
+        <button class="btn btn-outline-secondary"><i class="bi bi-search"></i> Filtrer</button>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-app table-hover">
+            <thead>
+                <tr><th>Client</th><th>Ville</th><th class="num">Visites</th><th class="num">Total dépensé</th><th class="num">Panier moyen</th><th>Dernière visite</th><th class="num">Points</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model.Rows)
+                {
+                    var days = r.LastVisit == null ? (int?)null : (int)(DateTime.Today - r.LastVisit.Value.Date).TotalDays;
+                    <tr>
+                        <td>
+                            <a asp-page="Details" asp-route-id="@r.Customer.Id" class="fw-semibold text-decoration-none">@r.Customer.FullName</a>
+                            <div class="small text-muted">@r.Customer.Phone</div>
+                        </td>
+                        <td>@r.Customer.City</td>
+                        <td class="num">@r.Visits</td>
+                        <td class="num fw-semibold">@r.Spent.ToString("N2") DH</td>
+                        <td class="num">@(r.Visits > 0 ? (r.Spent / r.Visits).ToString("N2") + " DH" : "—")</td>
+                        <td class="small">
+                            @if (days == null) { <span class="text-muted">Jamais</span> }
+                            else
+                            {
+                                @r.LastVisit!.Value.ToString("dd/MM/yyyy")
+                                @if (days > 14) { <span class="badge-soft amber ms-1">Inactif @days j</span> }
+                            }
+                        </td>
+                        <td class="num">@r.Customer.LoyaltyPoints</td>
+                        <td class="text-end text-nowrap">
+                            <a asp-page="Details" asp-route-id="@r.Customer.Id" class="btn btn-sm btn-light"><i class="bi bi-eye"></i></a>
+                            @if (canManage)
+                            {
+                                <a asp-page="Edit" asp-route-id="@r.Customer.Id" class="btn btn-sm btn-light"><i class="bi bi-pencil"></i></a>
+                                <form method="post" asp-page-handler="Delete" asp-route-id="@r.Customer.Id" class="d-inline" onsubmit="return confirm('Supprimer ce client ?')">
+                                    <button class="btn btn-sm btn-light text-danger"><i class="bi bi-trash"></i></button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <small class="text-muted">@Model.Rows.Count client(s)</small>
+</div>

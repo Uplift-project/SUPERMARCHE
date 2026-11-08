@@ -1,0 +1,73 @@
+@page
+@model WebApplication1.Pages.Promotions.IndexModel
+@{
+    ViewData["Title"] = "Promotions";
+    var canManage = Model.Can(Permissions.PromotionsManage);
+    var today = DateTime.Today;
+    var tabs = new[] { ("", "Toutes"), ("running", "En cours"), ("upcoming", "À venir"), ("ended", "Terminées / inactives") };
+}
+<div class="page-header">
+    <div>
+        <h1>Promotions</h1>
+        <p>Remises sur un produit ou sur une catégorie entière — appliquées automatiquement en caisse</p>
+    </div>
+    @if (canManage)
+    {
+        <a asp-page="Edit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Nouvelle promotion</a>
+    }
+</div>
+
+<ul class="nav nav-pills mb-3">
+    @foreach (var (key, label) in tabs)
+    {
+        <li class="nav-item"><a class="nav-link @((Model.Status ?? "") == key ? "active" : "")" asp-route-status="@key">@label</a></li>
+    }
+</ul>
+
+<div class="card-app">
+    @if (!Model.Promotions.Any())
+    {
+        <p class="text-muted mb-0">Aucune promotion.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-app table-hover">
+                <thead>
+                    <tr><th>Promotion</th><th>Cible</th><th class="num">Remise</th><th>Période</th><th>Statut</th><th></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model.Promotions)
+                    {
+                        var (cls, label) = !p.IsActive ? ("gray", "Désactivée")
+                            : p.EndDate.Date < today ? ("gray", "Terminée")
+                            : p.StartDate.Date > today ? ("blue", "À venir")
+                            : ("green", "En cours");
+                        <tr>
+                            <td class="fw-semibold">@p.Name</td>
+                            <td>
+                                @if (p.Product != null) { <i class="bi bi-box-seam"></i> @p.Product.Name }
+                                else if (p.Category != null) { <i class="bi bi-tags"></i> <text>Catégorie</text> @p.Category.Name }
+                            </td>
+                            <td class="num"><span class="badge-soft violet">-@p.DiscountPercent.ToString("0.#")%</span></td>
+                            <td class="small text-nowrap">@p.StartDate.ToString("dd/MM/yyyy") → @p.EndDate.ToString("dd/MM/yyyy")</td>
+                            <td><span class="badge-soft @cls">@label</span></td>
+                            <td class="text-end text-nowrap">
+                                @if (canManage)
+                                {
+                                    <a asp-page="Edit" asp-route-id="@p.Id" class="btn btn-sm btn-light"><i class="bi bi-pencil"></i></a>
+                                    <form method="post" asp-page-handler="Toggle" asp-route-id="@p.Id" asp-route-status="@Model.Status" class="d-inline">
+                                        <button class="btn btn-sm btn-light" title="@(p.IsActive ? "Désactiver" : "Activer")"><i class="bi @(p.IsActive ? "bi-pause-circle" : "bi-play-circle")"></i></button>
+                                    </form>
+                                    <form method="post" asp-page-handler="Delete" asp-route-id="@p.Id" asp-route-status="@Model.Status" class="d-inline" onsubmit="return confirm('Supprimer cette promotion ?')">
+                                        <button class="btn btn-sm btn-light text-danger"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

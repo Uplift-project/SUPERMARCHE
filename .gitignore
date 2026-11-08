@@ -1,0 +1,32 @@
+# ---- Visual Studio / .NET ----
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.rsuser
+[Dd]ebug/
+[Rr]elease/
+publish/
+*.pubxml
+*.pubxml.user
+
+# ---- Données locales (jamais sur GitHub) ----
+# Clés de chiffrement des cookies : secrètes, propres à chaque machine/serveur
+App_Data/
+# Photos des produits envoyées depuis l'admin
+WebApplication1/wwwroot/uploads/
+# Ancienne base SQLite et fichiers de base SQL Server
+*.db
+*.db-shm
+*.db-wal
+*.mdf
+*.ldf
+
+# ---- Ancien projet « Employees » (reste uniquement sur le PC) ----
+_ancien_code/
+
+# ---- Secrets éventuels ----
+appsettings.*.local.json
+*.env
+secrets.json

@@ -1,0 +1,72 @@
+@page "{id:int?}"
+@model WebApplication1.Pages.Promotions.EditModel
+@{
+    ViewData["Title"] = Model.IsNew ? "Nouvelle promotion" : "Modifier la promotion";
+}
+<div class="page-header">
+    <div><h1>@ViewData["Title"]</h1></div>
+    <a asp-page="Index" class="btn btn-light"><i class="bi bi-arrow-left"></i> Retour</a>
+</div>
+
+<div class="card-app" style="max-width:720px">
+    <form method="post">
+        <input type="hidden" asp-for="Promotion.Id" />
+        <div class="row g-3">
+            <div class="col-md-8">
+                <label asp-for="Promotion.Name" class="form-label"></label>
+                <input asp-for="Promotion.Name" class="form-control" placeholder="Ex : Semaine du lait" />
+                <span asp-validation-for="Promotion.Name" class="text-danger small"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Promotion.DiscountPercent" class="form-label"></label>
+                <input asp-for="Promotion.DiscountPercent" type="number" min="1" max="90" step="0.5" class="form-control" />
+                <span asp-validation-for="Promotion.DiscountPercent" class="text-danger small"></span>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label">S'applique à</label>
+                <div class="d-flex gap-3">
+                    <div class="form-check"><input class="form-check-input" type="radio" asp-for="Target" value="product" id="tProd" /><label class="form-check-label" for="tProd">Un produit</label></div>
+                    <div class="form-check"><input class="form-check-input" type="radio" asp-for="Target" value="category" id="tCat" /><label class="form-check-label" for="tCat">Toute une catégorie</label></div>
+                </div>
+            </div>
+            <div class="col-12" id="boxProduct">
+                <select asp-for="Promotion.ProductId" asp-items="Model.Products" class="form-select"><option value="">— Produit —</option></select>
+                <span asp-validation-for="Promotion.ProductId" class="text-danger small"></span>
+            </div>
+            <div class="col-12" id="boxCategory">
+                <select asp-for="Promotion.CategoryId" asp-items="Model.Categories" class="form-select"><option value="">— Catégorie —</option></select>
+                <span asp-validation-for="Promotion.CategoryId" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="Promotion.StartDate" class="form-label"></label>
+                <input asp-for="Promotion.StartDate" type="date" class="form-control" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Promotion.EndDate" class="form-label"></label>
+                <input asp-for="Promotion.EndDate" type="date" class="form-control" />
+                <span asp-validation-for="Promotion.EndDate" class="text-danger small"></span>
+            </div>
+            <div class="col-12">
+                <div class="form-check form-switch">
+                    <input asp-for="Promotion.IsActive" class="form-check-input" />
+                    <label asp-for="Promotion.IsActive" class="form-check-label"></label>
+                </div>
+            </div>
+        </div>
+        <div class="mt-4"><button class="btn btn-primary px-4"><i class="bi bi-check-lg"></i> Enregistrer</button></div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        function syncTarget() {
+            const cat = document.getElementById('tCat').checked;
+            document.getElementById('boxCategory').hidden = !cat;
+            document.getElementById('boxProduct').hidden = cat;
+        }
+        document.querySelectorAll('input[name="Target"]').forEach(r => r.addEventListener('change', syncTarget));
+        syncTarget();
+    </script>
+}

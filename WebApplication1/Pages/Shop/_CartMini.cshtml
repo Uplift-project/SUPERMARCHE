@@ -1,0 +1,65 @@
+@model Quote
+@if (Model.IsEmpty)
+{
+    <div class="drawer-empty">
+        <span>🛒</span>
+        <h6>Votre panier est vide</h6>
+        <p>Ajoutez des produits pour commencer vos courses.</p>
+        <button class="btn-shop" data-bs-dismiss="offcanvas">Continuer mes achats</button>
+    </div>
+}
+else
+{
+    var pct = Math.Min(100, (int)((Model.SubTotal - Model.Discount) / Model.FreeDeliveryThreshold * 100));
+    <div class="drawer-wrap">
+        <div class="free-ship">
+            @if (Model.RemainingForFreeDelivery > 0)
+            {
+                <span>Plus que <strong>@Model.RemainingForFreeDelivery.ToString("N2") DH</strong> pour la livraison gratuite</span>
+            }
+            else
+            {
+                <span><i class="bi bi-gift"></i> <strong>Livraison gratuite</strong> débloquée !</span>
+            }
+            <div class="bar"><i style="width:@pct%"></i></div>
+        </div>
+
+        <div class="drawer-lines">
+            @foreach (var l in Model.Lines)
+            {
+                var p = l.Product;
+                <div class="dline">
+                    <a class="dline-media" asp-page="/Shop/Product" asp-route-id="@p.Id" asp-route-slug="@Slug.From(p.Name)">
+                        @if (!string.IsNullOrEmpty(p.ImageUrl)) { <img src="@p.ImageUrl" alt="" /> } else { <span>@(p.Emoji ?? "🛒")</span> }
+                    </a>
+                    <div class="dline-info">
+                        <a asp-page="/Shop/Product" asp-route-id="@p.Id" asp-route-slug="@Slug.From(p.Name)">@p.Name</a>
+                        <small>@l.FinalUnitPrice.ToString("N2") DH / @p.Unit @if (l.DiscountPercent > 0) { <b class="text-danger">-@l.DiscountPercent.ToString("0")%</b> }</small>
+                        <form method="post" asp-page="/Shop/Cart" asp-page-handler="Update" data-cart data-refresh class="qty qty-sm">
+                            <input type="hidden" name="productId" value="@p.Id" />
+                            <button type="button" data-step="-1" aria-label="Moins"><i class="bi bi-dash"></i></button>
+                            <input type="number" name="qty" value="@l.Quantity" min="0" max="99" data-autosubmit aria-label="Quantité" />
+                            <button type="button" data-step="1" aria-label="Plus"><i class="bi bi-plus"></i></button>
+                        </form>
+                    </div>
+                    <div class="dline-end">
+                        <strong>@l.LineTotal.ToString("N2")</strong>
+                        <form method="post" asp-page="/Shop/Cart" asp-page-handler="Remove" data-cart data-refresh>
+                            <input type="hidden" name="productId" value="@p.Id" />
+                            <button class="link-remove" aria-label="Retirer"><i class="bi bi-trash3"></i></button>
+                        </form>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="drawer-foot">
+            <div class="sum-row"><span>Sous-total (@Model.ItemCount articles)</span><span>@Model.SubTotal.ToString("N2") DH</span></div>
+            @if (Model.Discount > 0) { <div class="sum-row text-danger"><span>Remises</span><span>-@Model.Discount.ToString("N2") DH</span></div> }
+            <div class="sum-row"><span>Livraison</span><span>@(Model.DeliveryFee == 0 ? "Gratuite" : Model.DeliveryFee.ToString("N2") + " DH")</span></div>
+            <div class="sum-row total"><span>Total</span><span>@Model.Total.ToString("N2") DH</span></div>
+            <a class="btn-shop w-100" asp-page="/Shop/Checkout">Commander <i class="bi bi-arrow-right"></i></a>
+            <a class="btn-shop btn-shop-outline w-100 mt-2" asp-page="/Shop/Cart">Voir le panier</a>
+        </div>
+    </div>
+}

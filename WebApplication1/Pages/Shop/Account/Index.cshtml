@@ -1,0 +1,72 @@
+@page "/compte"
+@model WebApplication1.Pages.Shop.Account.IndexModel
+@{
+    ViewData["Title"] = "Mon compte";
+    var c = Model.Customer;
+    var inProgress = Model.Orders.Count(o => o.Status is not (OrderStatus.Delivered or OrderStatus.Cancelled));
+}
+<div class="container-xl section">
+    <div class="account-head">
+        <span class="avatar-lg">@c.FullName[..1].ToUpper()</span>
+        <div>
+            <h1>Bonjour @c.FullName.Split(' ')[0]</h1>
+            <p>@c.Email · client depuis @c.CreatedAt.ToString("MMMM yyyy")</p>
+        </div>
+        <div class="account-stats">
+            <div><strong>@Model.Orders.Count</strong><small>commandes</small></div>
+            <div><strong>@inProgress</strong><small>en cours</small></div>
+            <div><strong>@c.LoyaltyPoints</strong><small>points fidélité</small></div>
+        </div>
+    </div>
+
+    <div class="account-grid">
+        <div class="panel" id="commandes">
+            <h2 class="panel-title"><i class="bi bi-bag-check"></i> Mes commandes</h2>
+            @if (Model.Orders.Count == 0)
+            {
+                <div class="empty py-4"><span>📦</span><h3>Aucune commande pour l'instant</h3><a class="btn-shop" asp-page="/Shop/Index">Faire mes courses</a></div>
+            }
+            @foreach (var o in Model.Orders)
+            {
+                <a class="order-row" asp-page="/Shop/Account/Order" asp-route-number="@o.Number">
+                    <span class="order-ico status-@o.Status.BadgeColor()"><i class="bi @o.Status.Icon()"></i></span>
+                    <span class="order-main">
+                        <strong>@o.Number</strong>
+                        <small>@o.CreatedAt.ToString("dd/MM/yyyy") · @o.Items.Sum(i => i.Quantity) articles · livraison @o.DeliveryDate.ToString("dd/MM") @o.DeliverySlot</small>
+                    </span>
+                    <span class="status-pill status-@o.Status.BadgeColor()">@o.Status.Label()</span>
+                    <strong class="order-total">@o.Total.ToString("N2") DH</strong>
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            }
+        </div>
+
+        <div class="panel">
+            <h2 class="panel-title"><i class="bi bi-person"></i> Mes informations</h2>
+            <form method="post" novalidate>
+                <div class="mb-3">
+                    <label class="form-label" asp-for="Input.FullName">Nom complet</label>
+                    <input class="form-control" asp-for="Input.FullName" />
+                    <span asp-validation-for="Input.FullName" class="field-error"></span>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" asp-for="Input.Phone">Téléphone</label>
+                    <input class="form-control" asp-for="Input.Phone" type="tel" />
+                    <span asp-validation-for="Input.Phone" class="field-error"></span>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" asp-for="Input.Address">Adresse de livraison</label>
+                    <input class="form-control" asp-for="Input.Address" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" asp-for="Input.City">Ville</label>
+                    <select class="form-select" asp-for="Input.City">
+                        <option value="">—</option>
+                        @foreach (var city in OrderService.Cities) { <option value="@city">@city</option> }
+                    </select>
+                </div>
+                <button class="btn-shop w-100">Enregistrer</button>
+            </form>
+        </div>
+    </div>
+</div>

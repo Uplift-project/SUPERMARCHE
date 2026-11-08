@@ -1,0 +1,65 @@
+@page "{id:int}"
+@model WebApplication1.Pages.Customers.DetailsModel
+@{
+    ViewData["Title"] = Model.Customer.FullName;
+    var c = Model.Customer;
+}
+<div class="page-header">
+    <div>
+        <h1>@c.FullName</h1>
+        <p>@c.City · @c.Phone · @c.Email · client depuis le @c.CreatedAt.ToString("dd/MM/yyyy")</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-page="Index" class="btn btn-light"><i class="bi bi-arrow-left"></i> Retour</a>
+        @if (Model.Can(Permissions.CustomersManage))
+        {
+            <a asp-page="Edit" asp-route-id="@c.Id" class="btn btn-primary"><i class="bi bi-pencil"></i> Modifier</a>
+        }
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3"><div class="stat-tile"><div class="label">Total dépensé</div><div class="value">@Model.TotalSpent.ToString("N2") DH</div><div class="sub">@Model.Sales.Count visite(s)</div></div></div>
+    <div class="col-6 col-lg-3"><div class="stat-tile"><div class="label">Panier moyen</div><div class="value">@Model.AverageBasket.ToString("N2") DH</div></div></div>
+    <div class="col-6 col-lg-3"><div class="stat-tile"><div class="label">Fréquence</div><div class="value">@(Model.AvgDaysBetweenVisits?.ToString("0.0") ?? "—") <small class="fs-6 text-muted">jours</small></div><div class="sub">entre deux visites (moyenne)</div></div></div>
+    <div class="col-6 col-lg-3"><div class="stat-tile"><div class="label">Points fidélité</div><div class="value">@c.LoyaltyPoints</div><div class="sub">Dernière visite : @(Model.Sales.FirstOrDefault()?.Date.ToString("dd/MM/yyyy") ?? "—")</div></div></div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card-app h-100">
+            <h2>Produits préférés</h2>
+            @if (!Model.Favorites.Any()) { <p class="text-muted">Aucun achat.</p> }
+            <ul class="list-group list-group-flush">
+                @foreach (var f in Model.Favorites)
+                {
+                    <li class="list-group-item px-0 d-flex justify-content-between">
+                        <span>@f.Name</span><span class="text-muted small">@f.Quantity achetés · @f.Spent.ToString("N0") DH</span>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card-app">
+            <h2>Historique des achats</h2>
+            <div class="table-responsive">
+                <table class="table table-app table-hover">
+                    <thead><tr><th>Vente</th><th>Date</th><th>Caissier</th><th class="num">Articles</th><th class="num">Total</th></tr></thead>
+                    <tbody>
+                        @foreach (var s in Model.Sales)
+                        {
+                            <tr>
+                                <td>@if (Model.Can(Permissions.SalesView)) { <a asp-page="/Sales/Details" asp-route-id="@s.Id">@s.Number</a> } else { @s.Number }</td>
+                                <td class="small">@s.Date.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td class="small">@s.User?.FullName</td>
+                                <td class="num">@s.Items.Sum(i => i.Quantity)</td>
+                                <td class="num fw-semibold">@s.Total.ToString("N2") DH</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

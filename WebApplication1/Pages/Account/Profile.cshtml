@@ -1,0 +1,74 @@
+@page
+@model WebApplication1.Pages.Account.ProfileModel
+@{
+    ViewData["Title"] = "Mon profil";
+}
+<div class="page-header">
+    <div>
+        <h1>Mon profil</h1>
+        <p>Vos informations, vos accès et votre activité récente</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card-app mb-4">
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <span class="avatar" style="width:56px;height:56px;font-size:1.4rem">@Model.Me.FullName[..1].ToUpper()</span>
+                <div>
+                    <div class="fw-bold fs-5">@Model.Me.FullName</div>
+                    <div class="text-muted">@Model.Me.Email</div>
+                </div>
+            </div>
+            <dl class="row mb-0 small">
+                <dt class="col-5">Rôle</dt><dd class="col-7"><span class="badge-soft violet">@Model.Me.Role?.Name</span></dd>
+                <dt class="col-5">Membre depuis</dt><dd class="col-7">@Model.Me.CreatedAt.ToString("dd/MM/yyyy")</dd>
+                <dt class="col-5">Dernière connexion</dt><dd class="col-7">@(Model.Me.LastLoginAt?.ToString("dd/MM/yyyy HH:mm") ?? "—")</dd>
+            </dl>
+            <hr />
+            <div class="small fw-semibold mb-2">Mes accès</div>
+            @if (Model.Access.IsSuperAdmin)
+            {
+                <span class="badge-soft green">Accès total (Super Admin)</span>
+            }
+            else
+            {
+                <div class="d-flex flex-wrap gap-1">
+                    @foreach (var p in Model.Access.Permissions)
+                    {
+                        <span class="badge-soft gray">@Permissions.LabelOf(p)</span>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="card-app">
+            <h2>Changer mon mot de passe</h2>
+            <form method="post">
+                <div class="mb-3">
+                    <label asp-for="CurrentPassword" class="form-label"></label>
+                    <input asp-for="CurrentPassword" class="form-control" />
+                    <span asp-validation-for="CurrentPassword" class="text-danger small"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="NewPassword" class="form-label"></label>
+                    <input asp-for="NewPassword" class="form-control" />
+                    <span asp-validation-for="NewPassword" class="text-danger small"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="ConfirmPassword" class="form-label"></label>
+                    <input asp-for="ConfirmPassword" class="form-control" />
+                    <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                </div>
+                <button class="btn btn-primary">Enregistrer</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card-app">
+            <h2>Mon activité récente</h2>
+            <partial name="_AuditTable" model="Model.MyActivity" />
+        </div>
+    </div>
+</div>

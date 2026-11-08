@@ -1,0 +1,39 @@
+@page "/recherche"
+@model WebApplication1.Pages.Shop.SearchModel
+@{
+    ViewData["Title"] = string.IsNullOrWhiteSpace(Model.Q) ? "Recherche" : $"« {Model.Q} »";
+}
+<div class="container-xl section">
+    <div class="section-head">
+        <div>
+            <h2>@(string.IsNullOrWhiteSpace(Model.Q) ? "Que cherchez-vous ?" : $"Résultats pour « {Model.Q} »")</h2>
+            @if (!string.IsNullOrWhiteSpace(Model.Q)) { <p>@Model.Results.Count produit(s) trouvé(s)</p> }
+        </div>
+    </div>
+
+    @if (Model.MatchingCategories.Count > 0)
+    {
+        <div class="chips mb-4">
+            @foreach (var c in Model.MatchingCategories)
+            {
+                <a class="chip chip-color" style="--c:@c.Color" asp-page="/Shop/Category" asp-route-slug="@c.Slug"><i class="bi @c.Icon"></i> @c.Path</a>
+            }
+        </div>
+    }
+
+    @if (Model.Results.Count > 0)
+    {
+        <div class="pgrid pgrid-wide">
+            @foreach (var c in Model.Results) { <partial name="_ProductCard" model="c" /> }
+        </div>
+    }
+    else
+    {
+        <div class="empty">
+            <span>🧺</span>
+            <h3>@(string.IsNullOrWhiteSpace(Model.Q) ? "Tapez le nom d'un produit" : "Aucun produit ne correspond")</h3>
+            <p>Essayez un autre mot : « lait », « shampooing », « tomates »…</p>
+            <a class="btn-shop" asp-page="/Shop/Index">Retour à l'accueil</a>
+        </div>
+    }
+</div>

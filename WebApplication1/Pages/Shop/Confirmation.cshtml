@@ -1,0 +1,47 @@
+@page "/commande/merci/{number}"
+@model WebApplication1.Pages.Shop.ConfirmationModel
+@{
+    ViewData["Title"] = "Commande confirmée";
+    var o = Model.Order;
+}
+<div class="container-xl section">
+    <div class="steps">
+        <span class="step done"><b><i class="bi bi-check"></i></b> Panier</span><i></i>
+        <span class="step done"><b><i class="bi bi-check"></i></b> Livraison & paiement</span><i></i>
+        <span class="step active"><b>3</b> Confirmation</span>
+    </div>
+
+    <div class="thanks">
+        <div class="thanks-ico"><i class="bi bi-check-lg"></i></div>
+        <h1>Merci @o.FullName.Split(' ')[0], votre commande est enregistrée !</h1>
+        <p>Commande <strong>@o.Number</strong> · Nous vous appelons au <strong>@o.Phone</strong> pour la confirmer.</p>
+
+        <div class="thanks-grid">
+            <div><i class="bi bi-calendar-event"></i><small>Livraison</small><strong>@o.DeliveryDate.ToString("dddd dd MMMM") · @o.DeliverySlot</strong></div>
+            <div><i class="bi bi-geo-alt"></i><small>Adresse</small><strong>@o.Address, @o.City</strong></div>
+            <div><i class="bi bi-wallet2"></i><small>Paiement</small><strong>@o.PaymentMethod.Label()</strong></div>
+            <div><i class="bi bi-receipt"></i><small>Total à payer</small><strong>@o.Total.ToString("N2") DH</strong></div>
+        </div>
+
+        <div class="panel text-start mt-4">
+            @foreach (var i in o.Items)
+            {
+                <div class="mini-line">
+                    <span class="mini-ico">@(i.Product?.Emoji ?? "🛒")<b>@i.Quantity</b></span>
+                    <span class="mini-name">@i.ProductName</span>
+                    <span>@i.LineTotal.ToString("N2") DH</span>
+                </div>
+            }
+            <div class="sum-row mt-2"><span>Livraison</span><span>@(o.DeliveryFee == 0 ? "Gratuite" : o.DeliveryFee.ToString("N2") + " DH")</span></div>
+            <div class="sum-row total"><span>Total</span><span>@o.Total.ToString("N2") DH</span></div>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-center flex-wrap mt-4">
+            @if (o.CustomerId != null)
+            {
+                <a class="btn-shop" asp-page="/Shop/Account/Order" asp-route-number="@o.Number"><i class="bi bi-geo"></i> Suivre ma commande</a>
+            }
+            <a class="btn-shop btn-shop-outline" asp-page="/Shop/Index">Retour à la boutique</a>
+        </div>
+    </div>
+</div>

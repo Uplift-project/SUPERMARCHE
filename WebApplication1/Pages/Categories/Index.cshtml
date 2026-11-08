@@ -1,0 +1,162 @@
+@page
+@model WebApplication1.Pages.Categories.IndexModel
+@{
+    ViewData["Title"] = "Catégories";
+    var canManage = Model.Can(Permissions.CategoriesManage);
+}
+<div class="page-header">
+    <div>
+        <h1>Catégories</h1>
+        <p>Rayons principaux (avec leur couleur sur la boutique) et leurs sous-catégories</p>
+    </div>
+    @if (canManage)
+    {
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" data-cat-edit data-id="0" data-parent="@(Model.RootOptions.FirstOrDefault()?.Value)" data-color="" data-icon="" data-sort="0"><i class="bi bi-diagram-2"></i> Nouvelle sous-catégorie</button>
+            <button class="btn btn-primary" data-cat-edit data-id="0" data-parent="" data-color="#dc2626" data-icon="bi-basket2" data-sort="@Model.RootOptions.Count"><i class="bi bi-plus-lg"></i> Nouveau rayon</button>
+        </div>
+    }
+</div>
+
+<div class="card-app">
+    <div class="table-responsive">
+        <table class="table table-app table-hover">
+            <thead>
+                <tr>
+                    <th>Catégorie</th>
+                    <th>Adresse boutique</th>
+                    <th class="num">Produits</th>
+                    <th class="num">Unités en stock</th>
+                    <th class="num">Valeur du stock (achat)</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model.Rows)
+                {
+                    var n = r.Node;
+                    var c = n.Category;
+                    <tr class="@(n.Depth == 0 ? "cat-root" : "cat-row-child")">
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="cat-swatch" style="background:@n.Color"><i class="bi @n.Icon"></i></span>
+                                <div>
+                                    <a asp-page="/Products/Index" asp-route-categoryId="@c.Id" class="fw-semibold text-decoration-none">@c.Name</a>
+                                    @if (n.Depth == 0) { <span class="badge-soft gray ms-1">Rayon</span> }
+                                    <div class="small text-muted">@c.Description</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="small"><a asp-page="/Shop/Category" asp-route-slug="@c.Slug" target="_blank" class="text-decoration-none">/c/@c.Slug <i class="bi bi-box-arrow-up-right"></i></a></td>
+                        <td class="num">@r.ProductCount</td>
+                        <td class="num">@r.StockUnits.ToString("N0")</td>
+                        <td class="num">@r.StockValue.ToString("N2") DH</td>
+                        <td class="text-end text-nowrap">
+                            @if (canManage)
+                            {
+                                @if (n.Depth == 0)
+                                {
+                                    <button class="btn btn-sm btn-light" title="Ajouter une sous-catégorie" data-cat-edit data-id="0" data-parent="@c.Id" data-color="" data-icon="" data-sort="@n.Children.Count"><i class="bi bi-plus-lg"></i></button>
+                                }
+                                <button class="btn btn-sm btn-light" title="Modifier" data-cat-edit data-id="@c.Id" data-name="@c.Name" data-desc="@c.Description"
+                                        data-parent="@c.ParentId" data-color="@c.Color" data-icon="@c.Icon" data-sort="@c.SortOrder"><i class="bi bi-pencil"></i></button>
+                                <form method="post" asp-page-handler="Delete" asp-route-id="@c.Id" class="d-inline" onsubmit="return confirm('Supprimer cette catégorie ?')">
+                                    <button class="btn btn-sm btn-light text-danger" title="Supprimer"><i class="bi bi-trash"></i></button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (canManage)
+{
+    <div class="modal fade" id="catModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <form method="post" asp-page-handler="Save" class="modal-content">
+                <div class="modal-header"><h5 class="modal-title fw-bold" id="catTitle">Catégorie</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <input type="hidden" name="Input.Id" id="catId" />
+                    <div class="mb-3">
+                        <label class="form-label" for="catName">Nom</label>
+                        <input name="Input.Name" id="catName" class="form-control" required maxlength="80" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="catParent">Rayon parent</label>
+                        <select name="Input.ParentId" id="catParent" class="form-select">
+                            <option value="">— Aucun : c'est un rayon principal —</option>
+                            @foreach (var o in Model.RootOptions) { <option value="@o.Value">@o.Text</option> }
+                        </select>
+                        <div class="form-text">Un rayon principal apparaît dans le menu de la boutique ; ses sous-catégories dans le méga-menu.</div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-7" id="colorBox">
+                            <label class="form-label">Couleur du rayon</label>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <input type="color" name="Input.Color" id="catColor" class="form-control color-input" />
+                                @foreach (var hex in WebApplication1.Pages.Categories.IndexModel.Palette)
+                                {
+                                    <button type="button" class="cat-swatch border-0" style="background:@hex;width:24px;height:24px" data-swatch="@hex" aria-label="@hex"></button>
+                                }
+                            </div>
+                            <div class="form-text" id="colorHint">Ex. rouge pour l'alimentation, bleu pour la beauté.</div>
+                        </div>
+                        <div class="col-5">
+                            <label class="form-label" for="catIcon">Icône <a href="https://icons.getbootstrap.com/" target="_blank" class="small">(liste)</a></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-tag" id="iconPreview"></i></span>
+                                <input name="Input.Icon" id="catIcon" class="form-control" placeholder="bi-basket2" maxlength="40" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-8">
+                            <label class="form-label" for="catDesc">Description</label>
+                            <textarea name="Input.Description" id="catDesc" class="form-control" rows="2" maxlength="250"></textarea>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label" for="catSort">Ordre</label>
+                            <input type="number" name="Input.SortOrder" id="catSort" class="form-control" min="0" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="width:auto">Annuler</button>
+                    <button class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        const $ = id => document.getElementById(id);
+        const syncParent = () => {
+            const isRoot = !$('catParent').value;
+            $('colorHint').textContent = isRoot ? "Ex. rouge pour l'alimentation, bleu pour la beauté."
+                                                : "Laissez noir pour hériter de la couleur du rayon parent.";
+        };
+        $('catParent')?.addEventListener('change', syncParent);
+        $('catIcon')?.addEventListener('input', () => $('iconPreview').className = 'bi ' + ($('catIcon').value || 'bi-tag'));
+        document.querySelectorAll('[data-swatch]').forEach(b => b.addEventListener('click', () => $('catColor').value = b.dataset.swatch));
+
+        document.querySelectorAll('[data-cat-edit]').forEach(btn => btn.addEventListener('click', () => {
+            const d = btn.dataset;
+            $('catId').value = d.id;
+            $('catName').value = d.name || '';
+            $('catDesc').value = d.desc || '';
+            $('catParent').value = d.parent || '';
+            $('catColor').value = d.color || '#000000';
+            $('catIcon').value = d.icon || '';
+            $('catSort').value = d.sort || 0;
+            $('iconPreview').className = 'bi ' + (d.icon || 'bi-tag');
+            $('catTitle').textContent = d.id !== '0' ? 'Modifier la catégorie' : (d.parent ? 'Nouvelle sous-catégorie' : 'Nouveau rayon');
+            syncParent();
+            bootstrap.Modal.getOrCreateInstance($('catModal')).show();
+        }));
+    </script>
+}

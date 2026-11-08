@@ -1,0 +1,119 @@
+@page
+@model WebApplication1.Pages.Analytics.IndexModel
+@{
+    ViewData["Title"] = "Analyses";
+    var basket = Model.SalesCount > 0 ? Model.Revenue / Model.SalesCount : 0;
+    var marginPct = Model.Revenue > 0 ? Model.GrossMargin / Model.Revenue * 100 : 0;
+}
+<div class="page-header">
+    <div>
+        <h1>Analyses</h1>
+        <p>Ventes, clients, produits et performance de l'équipe</p>
+    </div>
+    <div class="btn-group">
+        @foreach (var d in new[] { 7, 30, 90 })
+        {
+            <a asp-route-days="@d" class="btn btn-sm @(Model.Days == d ? "btn-primary" : "btn-outline-primary")">@d jours</a>
+        }
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-xl"><div class="stat-tile"><div class="label">Chiffre d'affaires</div><div class="value">@Model.Revenue.ToString("N0") DH</div><div class="sub">sur @Model.Days jours</div></div></div>
+    <div class="col-6 col-xl"><div class="stat-tile"><div class="label">Marge brute</div><div class="value">@Model.GrossMargin.ToString("N0") DH</div><div class="sub">@marginPct.ToString("0.0")% du CA</div></div></div>
+    <div class="col-6 col-xl"><div class="stat-tile"><div class="label">Ventes</div><div class="value">@Model.SalesCount</div><div class="sub">Panier moyen @basket.ToString("N2") DH</div></div></div>
+    <div class="col-6 col-xl"><div class="stat-tile"><div class="label">Clients fidèles actifs</div><div class="value">@Model.UniqueCustomers</div><div class="sub">@Model.IdentifiedShare.ToString("0")% des ventes avec carte client</div></div></div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-8">
+        <div class="card-app h-100">
+            <h2>Chiffre d'affaires par jour (DH)</h2>
+            <div class="chart-box"><canvas id="dayChart"></canvas></div>
+        </div>
+    </div>
+    <div class="col-xl-4">
+        <div class="card-app h-100">
+            <h2>Affluence : nombre de ventes par heure</h2>
+            <div class="chart-box"><canvas id="hourChart"></canvas></div>
+        </div>
+    </div>
+
+    <div class="col-xl-6">
+        <div class="card-app h-100">
+            <h2>CA par catégorie (DH)</h2>
+            <div class="chart-box"><canvas id="catChart"></canvas></div>
+            <details class="mt-2 small"><summary class="text-muted">Voir le tableau</summary>
+                <table class="table table-sm table-app mt-2">
+                    @foreach (var r in Model.ByCategory) { <tr><td>@r.Name</td><td class="num">@r.Count articles</td><td class="num">@r.Amount.ToString("N2") DH</td></tr> }
+                </table>
+            </details>
+        </div>
+    </div>
+    <div class="col-xl-6">
+        <div class="card-app h-100">
+            <h2>Top 10 produits</h2>
+            <table class="table table-app table-hover">
+                <thead><tr><th>#</th><th>Produit</th><th class="num">Qté vendue</th><th class="num">CA</th></tr></thead>
+                <tbody>
+                    @for (var i = 0; i < Model.TopProducts.Count; i++)
+                    {
+                        var r = Model.TopProducts[i];
+                        <tr><td class="text-muted">@(i + 1)</td><td><a asp-page="/Products/Details" asp-route-id="@r.Id" class="text-decoration-none">@r.Name</a></td><td class="num">@r.Count</td><td class="num fw-semibold">@r.Amount.ToString("N2") DH</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="col-xl-6">
+        <div class="card-app h-100">
+            <h2>Performance des caissiers</h2>
+            <table class="table table-app table-hover">
+                <thead><tr><th>Employé</th><th class="num">Ventes</th><th class="num">CA</th><th class="num">Panier moyen</th></tr></thead>
+                <tbody>
+                    @foreach (var r in Model.ByEmployee)
+                    {
+                        <tr><td>@r.Name</td><td class="num">@r.Count</td><td class="num fw-semibold">@r.Amount.ToString("N2") DH</td><td class="num">@((r.Count > 0 ? r.Amount / r.Count : 0).ToString("N2")) DH</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-xl-6">
+        <div class="card-app h-100">
+            <h2>Meilleurs clients</h2>
+            <table class="table table-app table-hover">
+                <thead><tr><th>Client</th><th class="num">Visites</th><th class="num">Dépensé</th></tr></thead>
+                <tbody>
+                    @foreach (var r in Model.TopCustomers)
+                    {
+                        <tr><td><a asp-page="/Customers/Details" asp-route-id="@r.Id" class="text-decoration-none">@r.Name</a></td><td class="num">@r.Count</td><td class="num fw-semibold">@r.Amount.ToString("N2") DH</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="card-app">
+            <h2>Produits sans aucune vente sur la période (@Model.SleepingProducts.Count)</h2>
+            @if (!Model.SleepingProducts.Any()) { <p class="text-muted mb-0">Tous les produits actifs se sont vendus. 👍</p> }
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var p in Model.SleepingProducts)
+                {
+                    <a asp-page="/Products/Details" asp-route-id="@p.Id" class="badge-soft gray text-decoration-none">@p.Name · stock @p.Quantity</a>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <script>
+        appBarChart('dayChart', @Json.Serialize(Model.DayLabels), @Json.Serialize(Model.DayValues), { label: 'CA' });
+        appBarChart('hourChart', @Json.Serialize(Model.HourLabels), @Json.Serialize(Model.HourValues), { label: 'Ventes', unit: '' });
+        appBarChart('catChart', @Json.Serialize(Model.ByCategory.Select(c => c.Name)), @Json.Serialize(Model.ByCategory.Select(c => c.Amount)), { label: 'CA', horizontal: true });
+    </script>
+}

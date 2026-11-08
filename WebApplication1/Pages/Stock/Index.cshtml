@@ -1,0 +1,40 @@
+@page
+@model WebApplication1.Pages.Stock.IndexModel
+@{
+    ViewData["Title"] = "Mouvements de stock";
+}
+<div class="page-header">
+    <div>
+        <h1>Mouvements de stock</h1>
+        <p>Chaque entrée et sortie, avec l'employé qui l'a faite</p>
+    </div>
+    @if (Model.Access.CanAny(Permissions.StockIn, Permissions.StockOut))
+    {
+        <a asp-page="Move" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Nouveau mouvement</a>
+    }
+</div>
+
+<div class="card-app">
+    <form method="get" class="filters">
+        <input asp-for="Q" class="form-control" placeholder="Produit…" />
+        <select asp-for="Type" class="form-select">
+            <option value="">Tous les types</option>
+            <option value="In">Entrées</option>
+            <option value="Out">Sorties</option>
+            <option value="Sale">Ventes</option>
+        </select>
+        <select asp-for="UserId" asp-items="Model.Users" class="form-select"><option value="">Tous les employés</option></select>
+        <input asp-for="From" type="date" class="form-control" title="Du" />
+        <input asp-for="To" type="date" class="form-control" title="Au" />
+        <button class="btn btn-outline-secondary"><i class="bi bi-search"></i> Filtrer</button>
+        <a asp-page="Index" class="btn btn-link">Réinitialiser</a>
+    </form>
+
+    <div class="d-flex gap-3 mb-3 small">
+        <span class="badge-soft green">Total entrées : +@Model.TotalIn</span>
+        <span class="badge-soft amber">Total sorties : -@Model.TotalOut</span>
+    </div>
+
+    <partial name="_MovementsTable" model="Model.Movements.Items" />
+    <partial name="_Pager" model="new PagerInfo(Model.Movements.Page, Model.Movements.TotalPages, Model.Movements.Total)" />
+</div>

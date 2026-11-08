@@ -1,0 +1,45 @@
+﻿@page "{id:int}"
+@model WebApplication1.Pages.Admin.Users.DetailsModel
+@{
+    ViewData["Title"] = Model.Employee.FullName;
+    var u = Model.Employee;
+}
+<div class="page-header">
+    <div class="d-flex align-items-center gap-3">
+        <span class="avatar" style="width:56px;height:56px;font-size:1.4rem">@u.FullName[..1].ToUpper()</span>
+        <div>
+            <h1>@u.FullName</h1>
+            <p>@u.Email · <span class="badge-soft violet">@u.Role?.Name</span>
+                @if (!u.IsActive) { <span class="badge-soft red">Désactivé</span> }
+                · dernière connexion : @(u.LastLoginAt?.ToString("dd/MM/yyyy HH:mm") ?? "jamais")</p>
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        @if (Model.Can(Permissions.UsersManage))
+        {
+            <a asp-page="Index" class="btn btn-light"><i class="bi bi-arrow-left"></i> Employés</a>
+            <a asp-page="Edit" asp-route-id="@u.Id" class="btn btn-primary"><i class="bi bi-pencil"></i> Modifier / mot de passe</a>
+        }
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3"><div class="stat-tile"><div class="label">Ventes (30 j)</div><div class="value">@Model.SalesCount30</div></div></div>
+    <div class="col-6 col-lg-3"><div class="stat-tile"><div class="label">CA encaissé (30 j)</div><div class="value">@Model.SalesTotal30.ToString("N0") DH</div></div></div>
+    <div class="col-6 col-lg-3"><div class="stat-tile"><div class="label">Unités ajoutées au stock (30 j)</div><div class="value" style="color:#006300">+@Model.StockIn30</div></div></div>
+    <div class="col-6 col-lg-3"><div class="stat-tile"><div class="label">Unités retirées du stock (30 j)</div><div class="value" style="color:#b91c1c">-@Model.StockOut30</div></div></div>
+</div>
+
+<div class="card-app">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <h2 class="mb-0">Toute l'activité de @u.FullName.Split(' ')[0]</h2>
+        <form method="get" class="d-flex gap-2">
+            <select name="act" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">Toutes les actions</option>
+                @foreach (var a in Model.Actions) { <option selected="@(a == Model.ActionFilter)">@a</option> }
+            </select>
+        </form>
+    </div>
+    <partial name="_AuditTable" model="Model.Activity.Items" view-data='new ViewDataDictionary(ViewData) { ["HideUser"] = true }' />
+    <partial name="_Pager" model="new PagerInfo(Model.Activity.Page, Model.Activity.TotalPages, Model.Activity.Total)" />
+</div>

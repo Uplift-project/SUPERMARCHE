@@ -1,0 +1,84 @@
+@model IEnumerable<AuditLog>
+@using System.Text.Json
+@functions {
+    static string ActionColor(string action) => action switch
+    {
+        AuditActions.Create => "green",
+        AuditActions.Update => "blue",
+        AuditActions.Delete => "red",
+        AuditActions.StockIn => "green",
+        AuditActions.StockOut => "amber",
+        AuditActions.Sale => "violet",
+        AuditActions.LoginFailed => "red",
+        _ => "gray",
+    };
+
+    static Dictionary<string, string?[]>? ParseChanges(string? json)
+    {
+        if (string.IsNullOrEmpty(json)) return null;
+        try { return JsonSerializer.Deserialize<Dictionary<string, string?[]>>(json); }
+        catch { return null; }
+    }
+}
+@{
+    var showUser = ViewData["HideUser"] is not true;
+}
+@if (!Model.Any())
+{
+    <p class="text-muted mb-0">Aucune activité enregistrée.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-app table-hover">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    @if (showUser) { <th>Employé</th> }
+                    <th>Action</th>
+                    <th>Détail</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var log in Model)
+                {
+                    var changes = ParseChanges(log.Changes);
+                    <tr>
+                        <td class="text-nowrap small">@log.Timestamp.ToString("dd/MM/yy")<br /><span class="text-muted">@log.Timestamp.ToString("HH:mm:ss")</span></td>
+                        @if (showUser)
+                        {
+                            <td class="text-nowrap">
+                                @if (log.UserId != null)
+                                {
+                                    <a asp-page="/Admin/Users/Details" asp-route-id="@log.UserId" class="text-decoration-none">@log.UserName</a>
+                                }
+                                else { @log.UserName }
+                            </td>
+                        }
+                        <td><span class="badge-soft @ActionColor(log.Action)">@log.Action</span><div class="small text-muted">@log.EntityType</div></td>
+                        <td>
+                            <div>@log.Description</div>
+                            @if (changes is { Count: > 0 } && log.Action != AuditActions.Update)
+                            {
+                                <details class="changes">
+                                    <summary class="text-muted">Voir les valeurs</summary>
+                                    @foreach (var c in changes)
+                                    {
+                                        <div><strong>@c.Key :</strong>
+                                            @if (c.Value.Length > 0 && c.Value[0] != null) { <del>@c.Value[0]</del> }
+                                            @if (c.Value.Length > 1 && c.Value[1] != null) { <text>→</text> <ins>@c.Value[1]</ins> }
+                                        </div>
+                                    }
+                                </details>
+                            }
+                            @if (!string.IsNullOrEmpty(log.IpAddress) && showUser)
+                            {
+                                <div class="small text-muted">IP : @log.IpAddress</div>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

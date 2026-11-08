@@ -1,0 +1,11 @@
+@page
+@{
+    ViewData["Title"] = "Accès refusé";
+}
+<div class="card-app text-center py-5" style="max-width:560px;margin:3rem auto">
+    <i class="bi bi-shield-lock" style="font-size:3rem;color:#b91c1c"></i>
+    <h1 class="h4 mt-3">Accès refusé</h1>
+    <p class="text-muted">Votre rôle ne vous donne pas accès à cette page ou à cette action.<br />
+        Contactez l'administrateur si vous pensez qu'il s'agit d'une erreur.</p>
+    <a asp-page="/Index" class="btn btn-primary">Retour à l'accueil</a>
+</div>

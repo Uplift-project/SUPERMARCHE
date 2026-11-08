@@ -1,0 +1,33 @@
+@page
+@model WebApplication1.Pages.Admin.Audit.IndexModel
+@{
+    ViewData["Title"] = "Journal d'activité";
+}
+<div class="page-header">
+    <div>
+        <h1>Journal d'activité</h1>
+        <p>Qui a fait quoi, et quand : ajouts, modifications, suppressions, stock, ventes, connexions</p>
+    </div>
+</div>
+
+<div class="card-app">
+    <form method="get" class="filters">
+        <input asp-for="Q" class="form-control" placeholder="Rechercher (ex : nom d'un produit)…" />
+        <select asp-for="UserId" asp-items="Model.Users" class="form-select"><option value="">Tous les employés</option></select>
+        <select name="act" class="form-select">
+            <option value="">Toutes les actions</option>
+            @foreach (var a in Model.Actions) { <option selected="@(a == Model.ActionFilter)">@a</option> }
+        </select>
+        <select asp-for="Entity" class="form-select">
+            <option value="">Tous les éléments</option>
+            @foreach (var e in Model.Entities) { <option>@e</option> }
+        </select>
+        <input asp-for="From" type="date" class="form-control" />
+        <input asp-for="To" type="date" class="form-control" />
+        <button class="btn btn-outline-secondary"><i class="bi bi-search"></i> Filtrer</button>
+        <a asp-page="Index" class="btn btn-link">Réinitialiser</a>
+    </form>
+
+    <partial name="_AuditTable" model="Model.Logs.Items" />
+    <partial name="_Pager" model="new PagerInfo(Model.Logs.Page, Model.Logs.TotalPages, Model.Logs.Total)" />
+</div>

@@ -1,0 +1,91 @@
+@page "{id:int?}"
+@model WebApplication1.Pages.Admin.Users.EditModel
+@{
+    ViewData["Title"] = Model.IsNew ? "Nouvel employé" : "Modifier l'employé";
+}
+<div class="page-header">
+    <div>
+        <h1>@ViewData["Title"]</h1>
+        <p>@(Model.IsNew ? "Créer un compte : l'employé se connectera avec cet email et ce mot de passe." : Model.Input.FullName)</p>
+    </div>
+    <a asp-page="Index" class="btn btn-light"><i class="bi bi-arrow-left"></i> Retour</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card-app">
+            <form method="post">
+                <input type="hidden" asp-for="Input.Id" />
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="Input.FullName" class="form-label"></label>
+                        <input asp-for="Input.FullName" class="form-control" />
+                        <span asp-validation-for="Input.FullName" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Input.Phone" class="form-label"></label>
+                        <input asp-for="Input.Phone" class="form-control" />
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="Input.Email" class="form-label"></label>
+                        <input asp-for="Input.Email" class="form-control" autocomplete="off" />
+                        <span asp-validation-for="Input.Email" class="text-danger small"></span>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="Input.Password" class="form-label">@(Model.IsNew ? "Mot de passe" : "Nouveau mot de passe")</label>
+                        <div class="input-group">
+                            <input asp-for="Input.Password" class="form-control" autocomplete="new-password" placeholder="@(Model.IsNew ? "" : "Laisser vide pour ne pas changer")" />
+                            <button type="button" class="btn btn-outline-secondary" id="genPwd" title="Générer"><i class="bi bi-magic"></i> Générer</button>
+                        </div>
+                        <span asp-validation-for="Input.Password" class="text-danger small"></span>
+                        <div class="form-text">Communiquez-le à l'employé ; il pourra le changer dans « Mon profil ».</div>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="Input.RoleId" class="form-label"></label>
+                        <select asp-for="Input.RoleId" class="form-select" disabled="@Model.IsMe">
+                            <option value="0">— Choisir un rôle —</option>
+                            @foreach (var r in Model.Roles) { <option value="@r.Id">@r.Name</option> }
+                        </select>
+                        @if (Model.IsMe) { <input type="hidden" asp-for="Input.RoleId" /> }
+                        <span asp-validation-for="Input.RoleId" class="text-danger small"></span>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input asp-for="Input.IsActive" class="form-check-input" disabled="@Model.IsMe" />
+                            <label asp-for="Input.IsActive" class="form-check-label"></label>
+                            @if (Model.IsMe) { <input type="hidden" asp-for="Input.IsActive" /> }
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4"><button class="btn btn-primary px-4"><i class="bi bi-check-lg"></i> Enregistrer</button></div>
+            </form>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card-app">
+            <h2>Rôles disponibles</h2>
+            @foreach (var r in Model.Roles)
+            {
+                <div class="mb-3">
+                    <div class="fw-semibold">@r.Name @if (r.IsSuperAdmin) { <span class="badge-soft violet">Accès total</span> }</div>
+                    <div class="small text-muted">@r.Description</div>
+                </div>
+            }
+            <a asp-page="/Admin/Roles/Index" class="small">Gérer les rôles et leurs accès →</a>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.getElementById('genPwd').addEventListener('click', () => {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@@#';
+            const a = new Uint32Array(10); crypto.getRandomValues(a);
+            const pwd = Array.from(a, n => chars[n % chars.length]).join('');
+            const input = document.getElementById('Input_Password');
+            input.type = 'text'; input.value = pwd;
+        });
+    </script>
+}

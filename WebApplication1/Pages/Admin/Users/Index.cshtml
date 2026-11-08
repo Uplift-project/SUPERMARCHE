@@ -1,0 +1,64 @@
+@page
+@model WebApplication1.Pages.Admin.Users.IndexModel
+@{
+    ViewData["Title"] = "Employés";
+}
+<div class="page-header">
+    <div>
+        <h1>Employés</h1>
+        <p>Comptes d'accès, rôles et activité de chaque employé</p>
+    </div>
+    <a asp-page="Edit" class="btn btn-primary"><i class="bi bi-person-plus"></i> Nouvel employé</a>
+</div>
+
+<div class="card-app">
+    <form method="get" class="filters">
+        <input asp-for="Q" class="form-control" placeholder="Nom ou email…" />
+        <select asp-for="RoleId" class="form-select">
+            <option value="">Tous les rôles</option>
+            @foreach (var r in Model.Roles) { <option value="@r.Id">@r.Name</option> }
+        </select>
+        <button class="btn btn-outline-secondary"><i class="bi bi-search"></i> Filtrer</button>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-app table-hover">
+            <thead><tr><th>Employé</th><th>Rôle</th><th>Statut</th><th>Dernière connexion</th><th class="num">Actions (30 j)</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var row in Model.Rows)
+                {
+                    var u = row.User;
+                    var isMe = u.Id == Model.Access.User?.Id;
+                    <tr class="@(u.IsActive ? "" : "opacity-50")">
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="avatar">@u.FullName[..1].ToUpper()</span>
+                                <div>
+                                    <a asp-page="Details" asp-route-id="@u.Id" class="fw-semibold text-decoration-none">@u.FullName</a> @if (isMe) { <span class="badge-soft blue">Vous</span> }
+                                    <div class="small text-muted">@u.Email</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="badge-soft @(u.Role?.IsSuperAdmin == true ? "violet" : "gray")">@u.Role?.Name</span></td>
+                        <td>@if (u.IsActive) { <span class="badge-soft green">Actif</span> } else { <span class="badge-soft red">Désactivé</span> }</td>
+                        <td class="small">@(u.LastLoginAt?.ToString("dd/MM/yyyy HH:mm") ?? "Jamais")</td>
+                        <td class="num">@row.Actions30</td>
+                        <td class="text-end text-nowrap">
+                            <a asp-page="Details" asp-route-id="@u.Id" class="btn btn-sm btn-light" title="Activité"><i class="bi bi-clock-history"></i></a>
+                            <a asp-page="Edit" asp-route-id="@u.Id" class="btn btn-sm btn-light" title="Modifier"><i class="bi bi-pencil"></i></a>
+                            @if (!isMe)
+                            {
+                                <form method="post" asp-page-handler="Toggle" asp-route-id="@u.Id" class="d-inline"
+                                      onsubmit="return confirm('@(u.IsActive ? "Désactiver" : "Réactiver") le compte de @u.FullName ?')">
+                                    <button class="btn btn-sm btn-light @(u.IsActive ? "text-danger" : "text-success")" title="@(u.IsActive ? "Désactiver" : "Réactiver")">
+                                        <i class="bi @(u.IsActive ? "bi-person-x" : "bi-person-check")"></i>
+                                    </button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

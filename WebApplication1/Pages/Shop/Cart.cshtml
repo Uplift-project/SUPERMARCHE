@@ -1,0 +1,98 @@
+@page "/panier"
+@model WebApplication1.Pages.Shop.CartModel
+@{
+    ViewData["Title"] = "Mon panier";
+    var q = Model.Quote;
+}
+<div class="container-xl section">
+    <div class="steps">
+        <span class="step active"><b>1</b> Panier</span><i></i>
+        <span class="step"><b>2</b> Livraison & paiement</span><i></i>
+        <span class="step"><b>3</b> Confirmation</span>
+    </div>
+
+    @if (q.IsEmpty)
+    {
+        <div class="empty">
+            <span>🛒</span>
+            <h3>Votre panier est vide</h3>
+            <p>Parcourez nos rayons et ajoutez vos produits préférés.</p>
+            <a class="btn-shop" asp-page="/Shop/Index">Commencer mes courses</a>
+        </div>
+    }
+    else
+    {
+        <div class="checkout-grid">
+            <div class="panel">
+                <div class="panel-head">
+                    <h1>Mon panier <small>(@q.ItemCount articles)</small></h1>
+                    <form method="post" asp-page-handler="Clear" onsubmit="return confirm('Vider le panier ?')">
+                        <button class="link-muted"><i class="bi bi-trash3"></i> Vider</button>
+                    </form>
+                </div>
+                @foreach (var l in q.Lines)
+                {
+                    var p = l.Product;
+                    <div class="cline @(l.OutOfStock ? "has-issue" : "")">
+                        <a class="cline-media" asp-page="/Shop/Product" asp-route-id="@p.Id" asp-route-slug="@Slug.From(p.Name)">
+                            @if (!string.IsNullOrEmpty(p.ImageUrl)) { <img src="@p.ImageUrl" alt="" /> } else { <span>@(p.Emoji ?? "🛒")</span> }
+                        </a>
+                        <div class="cline-info">
+                            <small class="text-muted">@p.Category?.Name</small>
+                            <a asp-page="/Shop/Product" asp-route-id="@p.Id" asp-route-slug="@Slug.From(p.Name)" class="cline-name">@p.Name</a>
+                            <span class="cline-unit">
+                                @l.FinalUnitPrice.ToString("N2") DH / @p.Unit
+                                @if (l.DiscountPercent > 0) { <del>@l.UnitPrice.ToString("N2")</del> <b class="tag-inline">-@l.DiscountPercent.ToString("0")%</b> }
+                            </span>
+                            @if (l.OutOfStock)
+                            {
+                                <span class="issue"><i class="bi bi-exclamation-triangle"></i> @(p.Quantity == 0 ? "Épuisé" : $"Plus que {p.Quantity} disponible(s)")</span>
+                            }
+                        </div>
+                        <form method="post" asp-page-handler="Update" class="qty">
+                            <input type="hidden" name="productId" value="@p.Id" />
+                            <button type="button" data-step="-1"><i class="bi bi-dash"></i></button>
+                            <input type="number" name="qty" value="@l.Quantity" min="0" max="99" data-autosubmit aria-label="Quantité" />
+                            <button type="button" data-step="1"><i class="bi bi-plus"></i></button>
+                        </form>
+                        <div class="cline-total">
+                            <strong>@l.LineTotal.ToString("N2") DH</strong>
+                            <form method="post" asp-page-handler="Remove">
+                                <input type="hidden" name="productId" value="@p.Id" />
+                                <button class="link-muted small"><i class="bi bi-x-lg"></i> Retirer</button>
+                            </form>
+                        </div>
+                    </div>
+                }
+                <a class="link-back" asp-page="/Shop/Index"><i class="bi bi-arrow-left"></i> Continuer mes achats</a>
+            </div>
+
+            <aside class="panel summary">
+                <h2>Récapitulatif</h2>
+                @{ var pct = Math.Min(100, (int)((q.SubTotal - q.Discount) / q.FreeDeliveryThreshold * 100)); }
+                <div class="free-ship">
+                    @if (q.RemainingForFreeDelivery > 0) { <span>Ajoutez <strong>@q.RemainingForFreeDelivery.ToString("N2") DH</strong> pour la livraison gratuite</span> }
+                    else { <span><i class="bi bi-gift"></i> <strong>Livraison gratuite</strong> débloquée !</span> }
+                    <div class="bar"><i style="width:@pct%"></i></div>
+                </div>
+                <div class="sum-row"><span>Sous-total</span><span>@q.SubTotal.ToString("N2") DH</span></div>
+                @if (q.Discount > 0) { <div class="sum-row text-danger"><span>Remises promotions</span><span>-@q.Discount.ToString("N2") DH</span></div> }
+                <div class="sum-row"><span>Livraison</span><span>@(q.DeliveryFee == 0 ? "Gratuite" : q.DeliveryFee.ToString("N2") + " DH")</span></div>
+                <div class="sum-row total"><span>Total TTC</span><span>@q.Total.ToString("N2") DH</span></div>
+                @if (q.Lines.Any(l => l.OutOfStock))
+                {
+                    <div class="flash flash-error small mb-3"><i class="bi bi-exclamation-triangle-fill"></i> Ajustez les articles indisponibles avant de commander.</div>
+                    <button class="btn-shop w-100" disabled>Passer la commande</button>
+                }
+                else
+                {
+                    <a class="btn-shop w-100" asp-page="/Shop/Checkout">Passer la commande <i class="bi bi-arrow-right"></i></a>
+                }
+                <ul class="trust">
+                    <li><i class="bi bi-shield-check"></i> Paiement uniquement à la livraison</li>
+                    <li><i class="bi bi-clock-history"></i> Annulation gratuite avant préparation</li>
+                </ul>
+            </aside>
+        </div>
+    }
+</div>

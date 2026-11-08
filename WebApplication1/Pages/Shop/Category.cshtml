@@ -1,0 +1,105 @@
+@page "/c/{slug}"
+@model WebApplication1.Pages.Shop.CategoryModel
+@{
+    var n = Model.Node;
+    var root = n.Root;
+    ViewData["Title"] = n.Name;
+    ViewData["Description"] = n.Category.Description ?? $"{n.Name} : tous les produits livrés chez vous.";
+}
+
+<div class="cat-hero" style="--c:@n.Color">
+    <div class="container-xl">
+        <nav class="crumbs">
+            <a asp-page="/Shop/Index"><i class="bi bi-house"></i> Accueil</a>
+            @foreach (var a in n.Ancestors()) { <i class="bi bi-chevron-right"></i><a asp-page="/Shop/Category" asp-route-slug="@a.Slug">@a.Name</a> }
+            <i class="bi bi-chevron-right"></i><span>@n.Name</span>
+        </nav>
+        <div class="cat-hero-row">
+            <span class="cat-hero-ico"><i class="bi @n.Icon"></i></span>
+            <div>
+                <h1>@n.Name</h1>
+                <p>@(n.Category.Description ?? $"Tous nos produits {n.Name.ToLower()}") · <strong>@Model.Counts.GetValueOrDefault(n.Id)</strong> produits</p>
+            </div>
+        </div>
+        @if (n.Children.Count > 0)
+        {
+            <div class="chips chips-lg">
+                @foreach (var c in n.Children)
+                {
+                    <a class="chip" asp-page="/Shop/Category" asp-route-slug="@c.Slug"><i class="bi @c.Icon"></i> @c.Name <small>@Model.Counts.GetValueOrDefault(c.Id)</small></a>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<div class="container-xl cat-layout" style="--c:@n.Color">
+    <aside class="cat-side d-none d-lg-block">
+        <div class="side-box" style="--c:@root.Color">
+            <a class="side-root @(root.Id == n.Id ? "active" : "")" asp-page="/Shop/Category" asp-route-slug="@root.Slug">
+                <i class="bi @root.Icon"></i> @root.Name
+            </a>
+            @foreach (var sub in root.Children)
+            {
+                var isActive = sub.SelfAndDescendants().Any(d => d.Id == n.Id);
+                <a class="side-link @(sub.Id == n.Id ? "active" : "")" asp-page="/Shop/Category" asp-route-slug="@sub.Slug">
+                    @sub.Name <span>@Model.Counts.GetValueOrDefault(sub.Id)</span>
+                </a>
+                @if (isActive)
+                {
+                    @foreach (var leaf in sub.Children)
+                    {
+                        <a class="side-link sub @(leaf.Id == n.Id ? "active" : "")" asp-page="/Shop/Category" asp-route-slug="@leaf.Slug">@leaf.Name <span>@Model.Counts.GetValueOrDefault(leaf.Id)</span></a>
+                    }
+                }
+            }
+        </div>
+        <div class="side-help">
+            <i class="bi bi-truck"></i>
+            <strong>Livraison offerte</strong>
+            <span>dès 300 DH d'achat. Paiement à la livraison.</span>
+        </div>
+    </aside>
+
+    <section class="cat-main">
+        <form method="get" class="toolbar" id="filters">
+            <span class="result-count"><strong>@Model.Total</strong> produit(s)</span>
+            <label class="toggle"><input type="checkbox" name="promo" value="true" @(Model.Promo ? "checked" : "") onchange="this.form.submit()" /><span>En promo</span></label>
+            <label class="toggle"><input type="checkbox" name="inStock" value="true" @(Model.InStock ? "checked" : "") onchange="this.form.submit()" /><span>En stock</span></label>
+            <select name="sort" class="form-select form-select-sm sort" onchange="this.form.submit()" aria-label="Trier">
+                <option value="" selected="@(string.IsNullOrEmpty(Model.Sort))">Trier : pertinence</option>
+                <option value="prix-asc" selected="@(Model.Sort == "prix-asc")">Prix croissant</option>
+                <option value="prix-desc" selected="@(Model.Sort == "prix-desc")">Prix décroissant</option>
+                <option value="promo" selected="@(Model.Sort == "promo")">Meilleures remises</option>
+                <option value="nouveau" selected="@(Model.Sort == "nouveau")">Nouveautés</option>
+                <option value="nom" selected="@(Model.Sort == "nom")">Nom A → Z</option>
+            </select>
+        </form>
+
+        @if (Model.Products.Count == 0)
+        {
+            <div class="empty">
+                <span>🔍</span>
+                <h3>Aucun produit ici pour le moment</h3>
+                <p>Essayez de retirer les filtres ou explorez un autre rayon.</p>
+                <a class="btn-shop" asp-page="/Shop/Category" asp-route-slug="@n.Slug">Retirer les filtres</a>
+            </div>
+        }
+        else
+        {
+            <div class="pgrid">
+                @foreach (var c in Model.Products) { <partial name="_ProductCard" model="c" /> }
+            </div>
+        }
+
+        @if (Model.TotalPages > 1)
+        {
+            <nav class="shop-pager">
+                @for (var i = 1; i <= Model.TotalPages; i++)
+                {
+                    <a href="@Model.PageUrl(i)" class="@(i == Model.PageNumber ? "active" : "")">@i</a>
+                }
+            </nav>
+        }
+    </section>
+</div>

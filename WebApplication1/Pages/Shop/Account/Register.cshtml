@@ -1,0 +1,55 @@
+@page "/compte/inscription"
+@model WebApplication1.Pages.Shop.Account.RegisterModel
+@{
+    ViewData["Title"] = "Créer un compte";
+}
+<div class="container-xl section">
+    <div class="auth-split">
+        <div class="auth-pane">
+            <h1>Créer un compte</h1>
+            <p class="text-muted">Quelques secondes suffisent. Vos prochaines commandes seront plus rapides.</p>
+            <form method="post" novalidate>
+                <div asp-validation-summary="ModelOnly" class="flash flash-error mb-3"></div>
+                <input type="hidden" asp-for="ReturnUrl" />
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label" asp-for="Input.FullName">Nom complet</label>
+                        <input class="form-control" asp-for="Input.FullName" autocomplete="name" />
+                        <span asp-validation-for="Input.FullName" class="field-error"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" asp-for="Input.Email">Email</label>
+                        <input class="form-control" asp-for="Input.Email" type="email" autocomplete="email" />
+                        <span asp-validation-for="Input.Email" class="field-error"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" asp-for="Input.Phone">Téléphone</label>
+                        <input class="form-control" asp-for="Input.Phone" type="tel" placeholder="06 12 34 56 78" autocomplete="tel" />
+                        <span asp-validation-for="Input.Phone" class="field-error"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" asp-for="Input.Password">Mot de passe</label>
+                        <input class="form-control" asp-for="Input.Password" autocomplete="new-password" />
+                        <span asp-validation-for="Input.Password" class="field-error"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" asp-for="Input.Confirm">Confirmation</label>
+                        <input class="form-control" asp-for="Input.Confirm" autocomplete="new-password" />
+                        <span asp-validation-for="Input.Confirm" class="field-error"></span>
+                    </div>
+                </div>
+                <button class="btn-shop w-100 mt-4">Créer mon compte</button>
+            </form>
+            <p class="mt-4 mb-0 text-center">Déjà client ? <a asp-page="/Shop/Account/Login" asp-route-returnUrl="@Model.ReturnUrl" class="fw-semibold">Se connecter</a></p>
+        </div>
+        <div class="auth-aside">
+            <h2>Vos avantages</h2>
+            <ul>
+                <li><i class="bi bi-star"></i> 1 point fidélité tous les 10 DH</li>
+                <li><i class="bi bi-truck"></i> Suivi de chaque livraison</li>
+                <li><i class="bi bi-bag-check"></i> Historique de vos commandes</li>
+                <li><i class="bi bi-shield-lock"></i> Données protégées, jamais revendues</li>
+            </ul>
+        </div>
+    </div>
+</div>

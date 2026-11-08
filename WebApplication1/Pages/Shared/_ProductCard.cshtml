@@ -1,0 +1,41 @@
+@model ProductCardVm
+@{
+    var p = Model.Product;
+}
+<article class="pcard @(Model.OutOfStock ? "is-out" : "")" style="--c:@Model.Color">
+    <a class="pcard-media" asp-page="/Shop/Product" asp-route-id="@p.Id" asp-route-slug="@Slug.From(p.Name)" aria-label="@p.Name">
+        @if (!string.IsNullOrEmpty(p.ImageUrl))
+        {
+            <img src="@p.ImageUrl" alt="@p.Name" loading="lazy" />
+        }
+        else
+        {
+            <span class="pcard-emoji">@(p.Emoji ?? "🛒")</span>
+        }
+        @if (Model.Discount > 0) { <span class="tag tag-promo">-@Model.Discount.ToString("0")%</span> }
+        else if (p.CreatedAt > DateTime.Now.AddDays(-15)) { <span class="tag tag-new">Nouveau</span> }
+    </a>
+    <div class="pcard-body">
+        <span class="pcard-cat">@p.Category?.Name</span>
+        <a class="pcard-name" asp-page="/Shop/Product" asp-route-id="@p.Id" asp-route-slug="@Slug.From(p.Name)">@p.Name</a>
+        <div class="pcard-foot">
+            <div class="price">
+                <strong>@Model.FinalPrice.ToString("N2")<small> DH</small></strong>
+                @if (Model.Discount > 0) { <del>@p.Price.ToString("N2")</del> }
+                <span class="unit">/ @p.Unit</span>
+            </div>
+            @if (Model.OutOfStock)
+            {
+                <span class="out-label">Épuisé</span>
+            }
+            else
+            {
+                <form method="post" asp-page="/Shop/Cart" asp-page-handler="Add" data-cart>
+                    <input type="hidden" name="productId" value="@p.Id" />
+                    <input type="hidden" name="qty" value="1" />
+                    <button class="add-btn" type="submit" aria-label="Ajouter @p.Name au panier"><i class="bi bi-plus-lg"></i></button>
+                </form>
+            }
+        </div>
+    </div>
+</article>
